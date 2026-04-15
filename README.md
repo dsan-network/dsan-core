@@ -83,14 +83,16 @@ dsan-core/
 
 ---
 
-## 🚀 Getting Started
+The Totem Layer represents the physical or hardware-bound component of the DSAN architecture.
 
-### 1. Clone the repository
+It is responsible for:
 
-```bash
-git clone https://github.com/dsan-network/dsan-core.git
-cd dsan-core
-```
+- anchoring identity to a physical entity  
+- enforcing execution authorization  
+- enabling off-cloud operation  
+- preventing unauthorized key usage  
+
+The Totem is not a peripheral component — it is a foundational element for sovereignty.
 
 ---
 
@@ -101,6 +103,17 @@ DSAN supports multiple execution contexts:
 - **Hybrid Mode**: Adaptive execution balancing sovereignty and connectivity  
 
 This design ensures resilience, flexibility, and control across different operational environments.
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/dsan-network/dsan-core.git
+cd dsan-core
+```
 
 ---
 
