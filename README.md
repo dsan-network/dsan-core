@@ -92,6 +92,8 @@ git clone https://github.com/dsan-network/dsan-core.git
 cd dsan-core
 ```
 
+---
+
 DSAN supports multiple execution contexts:
 
 - **Off-Cloud Mode**: Fully local, sovereign execution with no external dependencies  
