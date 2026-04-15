@@ -3,9 +3,9 @@
 from crypto.identity import Identity
 
 class DSANAgent:
-    def __init__(self, name):
+    def __init__(self, name, mode="hybrid"):
         self.name = name
-        self.identity = Identity()
+        self.mode = mode  # off-cloud | on-cloud | hybrid
 
     def sign_message(self, message: str):
         return self.identity.sign(message.encode())
