@@ -92,6 +92,14 @@ git clone https://github.com/dsan-network/dsan-core.git
 cd dsan-core
 ```
 
+DSAN supports multiple execution contexts:
+
+- **Off-Cloud Mode**: Fully local, sovereign execution with no external dependencies  
+- **On-Cloud Mode**: Connected execution enabling interoperability and scalability  
+- **Hybrid Mode**: Adaptive execution balancing sovereignty and connectivity  
+
+This design ensures resilience, flexibility, and control across different operational environments.
+
 ---
 
 ### 2. Install dependencies
