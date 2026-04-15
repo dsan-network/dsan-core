@@ -14,10 +14,10 @@ It provides the foundational building blocks required to create **sovereign digi
 
 * cryptographic identity
 * authenticated communication
-* secure message exchange
-* execution-ready infrastructure
+* controlled execution
+* hybrid (cloud/off-cloud) operation
 
-This repository focuses on **engineering primitives**, not full applications.
+This repository focuses on **core primitives and architecture**, not full applications.
 
 ---
 
@@ -26,28 +26,26 @@ This repository focuses on **engineering primitives**, not full applications.
 The goal of DSAN Core is to:
 
 * validate the DSAN protocol in practice
-* provide a minimal, auditable implementation
-* serve as a foundation for higher-level systems
-
-It is intentionally **modular, minimal, and extensible**.
+* provide a minimal and auditable implementation
+* establish a foundation for sovereign execution systems
 
 ---
 
 ## 🧱 Architecture
 
-```
+```text
 dsan-core/
 ├── dsan/
 │   ├── crypto/
-│   │   ├── identity.py        # Ed25519 identity
-│   │   ├── handshake.py       # X25519 + HKDF
+│   │   ├── identity.py
+│   │   ├── handshake.py
 │   │
 │   ├── agent/
-│   │   ├── agent.py           # Sovereign agent abstraction
+│   │   ├── agent.py
 │   │
 │   ├── network/
-│   │   ├── node.py            # TCP node
-│   │   ├── transport.py       # Message transport
+│   │   ├── node.py
+│   │   ├── transport.py
 │
 ├── examples/
 ├── tests/
@@ -63,46 +61,76 @@ dsan-core/
 
 ### ✔ Cryptographic Identity
 
-* Ed25519-based deterministic identity
-* message signing and verification
+* Ed25519-based identity
+* message signing
 
 ### ✔ Secure Key Exchange
 
 * X25519 Diffie-Hellman
-* HKDF-based key derivation
+* HKDF key derivation
 
 ### ✔ Authenticated Messaging
 
 * signed payloads
 * integrity validation
 
-### ✔ Network Layer (Minimal)
+### ✔ Minimal Network Layer
 
-* TCP-based communication
-* structured message transport
-
----
-
-The Totem Layer represents the physical or hardware-bound component of the DSAN architecture.
-
-It is responsible for:
-
-- anchoring identity to a physical entity  
-- enforcing execution authorization  
-- enabling off-cloud operation  
-- preventing unauthorized key usage  
-
-The Totem is not a peripheral component — it is a foundational element for sovereignty.
+* TCP communication
+* structured transport
 
 ---
 
-DSAN supports multiple execution contexts:
+## 🌐 Execution Context Layer (ECL)
 
-- **Off-Cloud Mode**: Fully local, sovereign execution with no external dependencies  
-- **On-Cloud Mode**: Connected execution enabling interoperability and scalability  
-- **Hybrid Mode**: Adaptive execution balancing sovereignty and connectivity  
+DSAN introduces an **Execution Context Layer (ECL)** that defines how and where agents operate.
 
-This design ensures resilience, flexibility, and control across different operational environments.
+### 🟢 On-Cloud Mode
+
+* connected execution
+* integration with external systems
+* scalable and interoperable
+
+### 🔴 Off-Cloud Mode
+
+* fully local execution
+* no external dependencies
+* resilient to network failure or censorship
+
+### 🟡 Hybrid Mode
+
+* dynamic switching between contexts
+* local sovereignty with optional synchronization
+
+> DSAN is not cloud-dependent.
+> It is **cloud-adaptive**.
+
+---
+
+## 🧬 Totem Layer (TL)
+
+The **Totem Layer** represents the physical or hardware-bound component of the DSAN architecture.
+
+It is responsible for anchoring digital execution to **real-world control**.
+
+### Core Functions
+
+* 🔐 Identity anchoring (non-exportable control)
+* 🧍 Human or physical validation (gesture, biometrics, presence)
+* ⚡ Execution authorization
+* 🧱 Off-cloud operational capability
+
+> The Totem is not optional.
+> It is the mechanism that prevents purely virtual capture of the system.
+
+---
+
+## ⚙️ Conceptual Flow
+
+1. Agent identity is created (cryptographic layer)
+2. Totem validates authorization (physical layer)
+3. Execution context is determined (ECL)
+4. Action is executed (local or networked)
 
 ---
 
@@ -141,37 +169,29 @@ python main.py
 
 ---
 
-## 🧪 Example Flow
-
-1. A DSAN Agent is instantiated
-2. A message is signed using Ed25519
-3. The payload is transmitted over TCP
-4. The receiving node processes the message
-
----
-
 ## ⚠️ Current Limitations
 
 This is a **reference implementation**, not production-ready.
 
 Missing components include:
 
-* full signature verification on node
+* signature verification at node level
 * encrypted transport (E2EE)
-* persistent identity (Totem model)
+* persistent identity (Totem-backed storage)
+* full Totem integration
 * Execution Policy Layer (EPL)
-* distributed consensus or coordination
+* distributed coordination
 
 ---
 
 ## 🧠 Roadmap
 
-* [ ] Signature verification at node level
-* [ ] End-to-end encryption (secure channels)
-* [ ] Deterministic identity persistence
-* [ ] EPL (Execution Policy Layer) integration
-* [ ] Multi-node network support
-* [ ] API layer (REST / gRPC)
+* [ ] Signature verification
+* [ ] End-to-end encryption
+* [ ] Totem integration (hardware layer)
+* [ ] Execution Policy Layer (EPL)
+* [ ] Hybrid execution logic
+* [ ] Multi-node communication
 
 ---
 
@@ -179,7 +199,7 @@ Missing components include:
 
 This repository is part of the DSAN Network.
 
-Core protocol and architecture:
+Core protocol:
 👉 https://github.com/dsan-network/dsan-ecosystem
 
 ---
@@ -188,45 +208,41 @@ Core protocol and architecture:
 
 This project is licensed under the Apache License 2.0.
 
-You are free to use, modify, and distribute this software, provided that proper attribution is maintained.
-
 ---
 
 ## ⚠️ Intellectual Property Notice
 
-This repository contains a **reference implementation** of the DSAN protocol.
+This repository provides a **reference implementation** of the DSAN protocol.
 
-Certain aspects of the DSAN architecture, including:
+Certain components are intentionally not included, including:
 
-* execution models (EPL)
+* Execution Policy Layer (EPL)
 * applied systems (e.g., RadSecure, DSAN-DREX)
-* deployment strategies
+* production deployment strategies
 
-may be subject to intellectual property protection and are **not fully disclosed** here.
+These may be subject to intellectual property protection.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome, particularly in:
+Contributions are welcome in:
 
 * cryptography
 * distributed systems
 * secure networking
-* protocol design
-
-Please open issues or pull requests.
+* protocol engineering
 
 ---
 
 ## 📬 Contact
 
-**Alessandro Turok da Silva Collares**
-Specialist in Radiological Protection
+Alessandro Turok da Silva Collares
 DSAN Network
 
 ---
 
 ## 🧩 Vision
 
-> To establish a foundational infrastructure where digital agents operate with cryptographic sovereignty, traceability, and controlled execution.
+> To establish a foundational infrastructure where digital agents operate with cryptographic sovereignty, physical authorization, and adaptive execution across cloud and non-cloud environments.
+
