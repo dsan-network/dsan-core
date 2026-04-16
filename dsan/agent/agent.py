@@ -1,6 +1,6 @@
 # agent/agent.py
 
-from crypto.identity import Identity
+from dsan.crypto.identity import Identity
 
 class Totem:
     def __init__(self, id):
@@ -15,15 +15,16 @@ class Totem:
         return self.unlocked
 
 class DSANAgent:
-    def __init__(self, name, totem):
+    def __init__(self, name, mode=None):
         self.name = name
-        self.totem = totem
+        self.mode = mode
+        self.totem = None
 
-    def execute(self, action):
-        if not self.totem.authorize():
+    def execute(self, action: str):
+        if not hasattr(self, "totem") or not self.totem.is_authorized():
             raise Exception("Execution denied: Totem not authorized")
 
-        return f"Executing {action}"
+        return f"[EXECUTED] {action}"
         
     def sign_message(self, message: str):
         return self.identity.sign(message.encode())
