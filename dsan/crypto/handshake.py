@@ -1,23 +1,24 @@
-# crypto/handshake.py
-
-from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
+import base64
+from cryptography.hazmat.primitives.asymmetric import x25519
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes
+from cryptography.fernet import Fernet
 
-class Handshake:
-    def __init__(self):
-        self.private_key = X25519PrivateKey.generate()
-        self.public_key = self.private_key.public_key()
+def derive_shared_key(priv, peer_pub_bytes):
+    peer = x25519.X25519PublicKey.from_public_bytes(peer_pub_bytes)
+    shared = priv.exchange(peer)
 
-    def derive_shared_key(self, peer_public_key_bytes):
-        peer_key = X25519PrivateKey.from_private_bytes(peer_public_key_bytes)
-        shared = self.private_key.exchange(peer_key)
+    key = HKDF(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=None,
+        info=b"dsan-v2"
+    ).derive(shared)
 
-        hkdf = HKDF(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=None,
-            info=b'dsan-handshake'
-        )
+    return base64.urlsafe_b64encode(key)
 
-        return hkdf.derive(shared)
+def encrypt(key, data: dict):
+    return Fernet(key).encrypt(str(data).encode()).decode()
+
+def decrypt(key, token: str):
+    return Fernet(key).decrypt(token.encode()).decode()
