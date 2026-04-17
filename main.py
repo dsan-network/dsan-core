@@ -1,17 +1,4 @@
-# main.py
+import uvicorn
 
-from agent.agent import DSANAgent
-from network.transport import send_message
-
-alice = DSANAgent("alice")
-
-message = "Hello DSAN"
-signature = alice.sign_message(message)
-
-payload = {
-    "sender": "alice",
-    "message": message,
-    "signature": signature.hex()
-}
-
-send_message("localhost", 5000, payload)
+if __name__ == "__main__":
+    uvicorn.run("dsan.network.node:app", host="0.0.0.0", port=8000)
