@@ -1,18 +1,24 @@
-# crypto/identity.py
+import base64
+from cryptography.hazmat.primitives.asymmetric import ed25519, x25519
 
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.hazmat.primitives import serialization
-
-class Identity:
+class DSANTotem:
     def __init__(self):
-        self.private_key = Ed25519PrivateKey.generate()
-        self.public_key = self.private_key.public_key()
+        self.sig_private = ed25519.Ed25519PrivateKey.generate()
+        self.enc_private = x25519.X25519PrivateKey.generate()
+        self.unlock_gesture = [1, 2, 0]
 
-    def sign(self, message: bytes) -> bytes:
-        return self.private_key.sign(message)
+    def verify_gesture(self, gesture):
+        return gesture == self.unlock_gesture
 
-    def serialize_public(self):
-        return self.public_key.public_bytes(
-            encoding=serialization.Encoding.Raw,
-            format=serialization.PublicFormat.Raw
-        )
+    def sign(self, message: bytes):
+        return base64.b64encode(self.sig_private.sign(message)).decode()
+
+    def get_public_keys(self):
+        return {
+            "sig": base64.b64encode(
+                self.sig_private.public_key().public_bytes_raw()
+            ).decode(),
+            "enc": base64.b64encode(
+                self.enc_private.public_key().public_bytes_raw()
+            ).decode()
+        }
