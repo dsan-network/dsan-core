@@ -1,33 +1,58 @@
-# agent/agent.py
-
-from dsan.crypto.identity import Identity
-
-class Totem:
-    def __init__(self, id):
-        self.id = id
-        self.unlocked = False
-
-    def authenticate(self, gesture_code):
-        if gesture_code == "valid":
-            self.unlocked = True
-
-    def authorize(self):
-        return self.unlocked
+import base64
+from dsan.crypto.identity import DSANTotem
+from dsan.crypto.handshake import derive_shared_key, encrypt, decrypt
 
 class DSANAgent:
-    def __init__(self, name, mode=None):
-        self.name = name
-        self.mode = mode
-        self.totem = None
+    def __init__(self, agent_id):
+        self.id = agent_id
+        self.totem = DSANTotem()
 
-    def execute(self, action: str):
-        if not hasattr(self, "totem") or not self.totem.is_authorized():
-            raise Exception("Execution denied: Totem not authorized")
+    def create_message(self, payload: dict, receiver_enc_pub=None):
+        data = str(payload)
+        encrypted = False
 
-        return f"[EXECUTED] {action}"
-        
-    def sign_message(self, message: str):
-        return self.identity.sign(message.encode())
+        if receiver_enc_pub:
+            key = derive_shared_key(
+                self.totem.enc_private,
+                base64.b64decode(receiver_enc_pub)
+            )
+            data = encrypt(key, payload)
+            encrypted = True
 
-    def get_public_key(self):
-        return self.identity.serialize_public()
+        message = data.encode()
+        signature = self.totem.sign(message)
+
+        return {
+            "sender": self.id,
+            "payload": data,
+            "encrypted": encrypted,
+            "signature": signature,
+            "pub_keys": self.totem.get_public_keys()
+        }
+
+    def receive(self, msg):
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+        try:
+            pub = Ed25519PublicKey.from_public_bytes(
+                base64.b64decode(msg["pub_keys"]["sig"])
+            )
+
+            pub.verify(
+                base64.b64decode(msg["signature"]),
+                msg["payload"].encode()
+            )
+
+            if msg["encrypted"]:
+                key = derive_shared_key(
+                    self.totem.enc_private,
+                    base64.b64decode(msg["pub_keys"]["enc"])
+                )
+                data = decrypt(key, msg["payload"])
+            else:
+                data = msg["payload"]
+
+            return True, data
+
+        except Exception:
+            return False, None
