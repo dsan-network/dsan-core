@@ -1,28 +1,33 @@
-# network/node.py
+from fastapi import FastAPI
+from pydantic import BaseModel
 
-import socket
-import json
+from dsan.agent.agent import DSANAgent
+from dsan.core.engine import execute
 
-class Node:
-    def __init__(self, host='localhost', port=5000):
-        self.host = host
-        self.port = port
+app = FastAPI()
+agent = DSANAgent("node_1")
 
-    def start(self):
-        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server.bind((self.host, self.port))
-        server.listen()
+class Message(BaseModel):
+    sender: str
+    payload: str
+    encrypted: bool
+    signature: str
+    pub_keys: dict
 
-        print(f"[DSAN NODE] Listening on {self.port}")
+@app.get("/")
+def root():
+    return {"status": "DSAN node online"}
 
-        while True:
-            conn, addr = server.accept()
-            data = conn.recv(4096)
+@app.post("/receive")
+def receive(msg: Message):
+    valid, data = agent.receive(msg.dict())
 
-            try:
-                msg = json.loads(data.decode())
-                print(f"[RECEIVED] {msg}")
-            except:
-                print("[ERROR] Invalid message")
+    if not valid:
+        return {"status": "rejected"}
 
-            conn.close()
+    result = execute(data)
+
+    return {
+        "status": "accepted",
+        "result": result
+    }
