@@ -181,7 +181,9 @@ Missing components include:
 * full Totem integration
 * Execution Policy Layer (EPL)
 * distributed coordination
-
+* ledger currently local to agent (not globally synchronized)
+* no consensus or fork resolution
+* nodes do not enforce global state continuity
 ---
 
 ## 🧠 Roadmap

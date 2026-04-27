@@ -1,137 +1,33 @@
+import time
 import json
-import os
-import base64
+import hashlib
+from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from cryptography.hazmat.primitives.asymmetric import ed25519, x25519
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.fernet import Fernet
-
-
-class DSANTotem:
-    def __init__(self, sig_priv_hex=None, enc_priv_hex=None):
-        if sig_priv_hex and enc_priv_hex:
-            self.sig_private = ed25519.Ed25519PrivateKey.from_private_bytes(bytes.fromhex(sig_priv_hex))
-            self.enc_private = x25519.X25519PrivateKey.from_private_bytes(bytes.fromhex(enc_priv_hex))
-        else:
-            self.sig_private = ed25519.Ed25519PrivateKey.generate()
-            self.enc_private = x25519.X25519PrivateKey.generate()
-
-        self.unlock_gesture = [1, 2, 0]
-
-    def verify_gesture(self, seq):
-        return seq == self.unlock_gesture
-
-    def get_public_keys(self):
-        return {
-            "sig": self.sig_private.public_key().public_bytes_raw().hex(),
-            "enc": self.enc_private.public_key().public_bytes_raw().hex()
-        }
-
-    def export_private_keys(self):
-        return {
-            "sig": self.sig_private.private_bytes_raw().hex(),
-            "enc": self.enc_private.private_bytes_raw().hex()
-        }
-
-    def generate_shared_key(self, peer_enc_pub_hex):
-        peer_pub = x25519.X25519PublicKey.from_public_bytes(bytes.fromhex(peer_enc_pub_hex))
-        shared_secret = self.enc_private.exchange(peer_pub)
-
-        derived_key = HKDF(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=None,
-            info=b"dsan-v2"
-        ).derive(shared_secret)
-
-        return base64.urlsafe_b64encode(derived_key)
-
+def canonical_json(data):
+    return json.dumps(data, sort_keys=True, separators=(',', ':'))
 
 class DSANAgent:
-    def __init__(self, agent_id="default"):
-        self.id = agent_id
-        self.data_path = f"data/agents/{agent_id}.json"
+    def __init__(self, agent_id="agent"):
+        self.agent_id = agent_id
+        self.private_key = ed25519.Ed25519PrivateKey.generate()
+        self.public_key = self.private_key.public_key()
 
-        os.makedirs("data/agents", exist_ok=True)
-
-        self.local_log = []
-        self.state_hash = "0" * 64
-        self.totem = None
-        self.used_nonces = set()
-
-        if not self.load_state():
-            self.totem = DSANTotem()
-            self.save_state()
-
-    def sign_message(self, payload, recipient_pub_keys=None):
-        final_payload = payload
-        encrypted = False
-
-        if recipient_pub_keys:
-            shared_key = self.totem.generate_shared_key(recipient_pub_keys["enc"])
-            final_payload = Fernet(shared_key).encrypt(json.dumps(payload).encode()).decode()
-            encrypted = True
-
-        envelope = {
-            "encrypted": encrypted,
-            "payload": final_payload,
-            "sender_enc_pub": self.totem.get_public_keys()["enc"],
-            "sender_id": self.id
+    def create_event(self, payload, prev_hash):
+        event = {
+            "sender": self.agent_id,
+            "payload": payload,
+            "nonce": str(int(time.time() * 1000)),
+            "prev_hash": prev_hash
         }
 
-        signature = self.totem.sig_private.sign(final_payload.encode()).hex()
+        event_bytes = canonical_json(event).encode()
+        signature = self.private_key.sign(event_bytes)
 
-        return signature, envelope
+        event_hash = hashlib.sha256(event_bytes).hexdigest()
 
-    def receive(self, envelope, signature, sender_sig_pub_hex):
-        try:
-            sender_pub = ed25519.Ed25519PublicKey.from_public_bytes(bytes.fromhex(sender_sig_pub_hex))
-            sender_pub.verify(bytes.fromhex(signature), envelope["payload"].encode())
-
-            data = envelope["payload"]
-
-            if envelope.get("encrypted"):
-                shared_key = self.totem.generate_shared_key(envelope["sender_enc_pub"])
-                data = Fernet(shared_key).decrypt(data.encode()).decode()
-
-            # LOG + HASH CHAIN
-            entry = {
-                "data": data,
-                "prev_hash": self.state_hash
-            }
-
-            new_hash = hashes.Hash(hashes.SHA256())
-            new_hash.update((json.dumps(entry) + self.state_hash).encode())
-            self.state_hash = new_hash.finalize().hex()
-
-            self.local_log.append(entry)
-            self.save_state()
-
-            return True
-
-        except Exception as e:
-            print("Erro:", e)
-            return False
-
-    def save_state(self):
-        with open(self.data_path, "w") as f:
-            json.dump({
-                "state_hash": self.state_hash,
-                "log": self.local_log,
-                "priv_keys": self.totem.export_private_keys()
-            }, f, indent=4)
-
-    def load_state(self):
-        if os.path.exists(self.data_path):
-            with open(self.data_path) as f:
-                data = json.load(f)
-                priv = data.get("priv_keys")
-
-                if priv:
-                    self.totem = DSANTotem(
-                        sig_priv_hex=priv["sig"],
-                        enc_priv_hex=priv["enc"]
-                    )
-                    return True
-        return False
+        return {
+            "event": event,
+            "hash": event_hash,
+            "signature": signature.hex(),
+            "sender_sig_pub": self.public_key.public_bytes_raw().hex()
+        }

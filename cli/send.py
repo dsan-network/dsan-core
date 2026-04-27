@@ -1,26 +1,20 @@
 import requests
 from dsan.agent.agent import DSANAgent
 
-# agentes locais
-alice = DSANAgent("node2")   # quem envia
-bob = DSANAgent("node1")     # quem recebe
+agent = DSANAgent("alice")
 
-payload = {
-    "type": "TRANSFER",
-    "value": 100
-}
+# 🔗 pega último hash do node
+res = requests.get("http://127.0.0.1:5001/last_hash").json()
+prev_hash = res["last_hash"]
 
-signature, envelope = alice.sign_message(
-    payload,
-    recipient_pub_keys=bob.totem.get_public_keys()
+packet = agent.create_event(
+    {"msg": "transfer_funds"},
+    prev_hash
 )
 
-packet = {
-    "envelope": envelope,
-    "signature": signature,
-    "sender_sig_pub": alice.totem.get_public_keys()["sig"]
-}
-
-res = requests.post("http://127.0.0.1:5001/receive", json=packet)
+res = requests.post(
+    "http://127.0.0.1:5001/receive",
+    json=packet
+)
 
 print(res.json())
