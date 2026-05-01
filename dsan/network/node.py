@@ -4,21 +4,22 @@ import json
 import hashlib
 import requests
 from flask import Flask, request, jsonify
-from dsan.crypto.merkle import merkle_root
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+from dsan.crypto.merkle import merkle_root
 from dsan.crypto.validator import Validator
 from dsan.core.context import ExecutionContext
+from dsan.core.replay import replay_ledger
 from dsan.epl.policy import DSANPolicy
 from dsan.totem.totem import DSANTotem
-from dsan.core.replay import replay_ledger
-from dsan.core.state import DSANState
 
-# ------------------------
-# INIT (ordem correta)
-# ------------------------
 
 app = Flask(__name__)
+
+# ------------------------
+# INIT
+# ------------------------
 
 NODE_ID = sys.argv[1]
 PORT = int(sys.argv[2])
@@ -28,8 +29,8 @@ LEDGER_FILE = f"ledger_{NODE_ID}.json"
 
 context = ExecutionContext(PEERS)
 totem = DSANTotem()
-
 validator = Validator()
+
 ledger = []
 seen_hashes = set()
 seen_nonces = set()
@@ -39,24 +40,33 @@ seen_nonces = set()
 # ------------------------
 
 def load_ledger():
-    global ledger
+    global ledger, seen_hashes, seen_nonces
+
     if os.path.exists(LEDGER_FILE):
-        with open(LEDGER_FILE, "r") as f:
+        with open(LEDGER_FILE, "r", encoding="utf-8") as f:
             ledger = json.load(f)
 
+        seen_hashes = {entry["hash"] for entry in ledger}
+        seen_nonces = {entry["event"]["nonce"] for entry in ledger if "event" in entry and "nonce" in entry["event"]}
+
+
 def save_ledger():
-    with open(LEDGER_FILE, "w") as f:
-        json.dump(ledger, f, indent=2)
+    with open(LEDGER_FILE, "w", encoding="utf-8") as f:
+        json.dump(ledger, f, indent=2, ensure_ascii=False)
+
+
+def canonical_json(data):
+    return json.dumps(data, sort_keys=True, separators=(",", ":"))
+
+
+def hash_event(event):
+    return hashlib.sha256(canonical_json(event).encode()).hexdigest()
+
 
 def compute_root():
     hashes = [entry["hash"] for entry in ledger]
     return merkle_root(hashes)
 
-def canonical_json(data):
-    return json.dumps(data, sort_keys=True, separators=(',', ':'))
-
-def hash_event(event):
-    return hashlib.sha256(canonical_json(event).encode()).hexdigest()
 
 def last_hash():
     if not ledger:
@@ -64,7 +74,7 @@ def last_hash():
     return ledger[-1]["hash"]
 
 # ------------------------
-# VALIDATORS CHECK
+# VALIDATORS
 # ------------------------
 
 def validate_validators(entry):
@@ -77,7 +87,6 @@ def validate_validators(entry):
 
             key = Ed25519PublicKey.from_public_bytes(pub)
             key.verify(sig, h)
-
         except Exception:
             return False
 
@@ -87,39 +96,43 @@ def validate_validators(entry):
 # STATUS
 # ------------------------
 
-@app.route('/state_root')
-def get_state_root():
-    return jsonify({
-        "state_root": replay_ledger(ledger)
-    })
-
-@app.route('/')
+@app.route("/")
 def home():
     return jsonify({"status": f"{NODE_ID} online"})
 
-@app.route('/state')
+
+@app.route("/state")
 def state():
     return jsonify({
         "ledger_size": len(ledger),
         "last_hash": last_hash()
     })
 
-@app.route('/last_hash')
-def get_last_hash():
-    return jsonify({"last_hash": last_hash()})
 
-@app.route('/root')
+@app.route("/root")
 def root():
     return jsonify({
         "root": compute_root(),
         "size": len(ledger)
     })
 
+
+@app.route("/state_root")
+def get_state_root():
+    return jsonify({
+        "state_root": replay_ledger(ledger)
+    })
+
+
+@app.route("/ledger")
+def get_ledger():
+    return jsonify(ledger)
+
 # ------------------------
 # VOTE
 # ------------------------
 
-@app.route('/vote', methods=['POST'])
+@app.route("/vote", methods=["POST"])
 def vote():
     data = request.get_json()
 
@@ -138,11 +151,7 @@ def vote():
             return jsonify({"vote": "NO", "reason": "tamper"})
 
         if event["prev_hash"] != last_hash():
-            return jsonify({
-                "vote": "NO",
-                "reason": "chain_mismatch",
-                "expected": last_hash()
-            })
+            return jsonify({"vote": "NO", "reason": "chain_mismatch"})
 
         decision = DSANPolicy.evaluate(event)
         if not decision["allowed"]:
@@ -157,8 +166,10 @@ def vote():
 # RECEIVE
 # ------------------------
 
-@app.route('/receive', methods=['POST'])
+@app.route("/receive", methods=["POST"])
 def receive():
+    global ledger
+
     data = request.get_json()
 
     try:
@@ -171,13 +182,17 @@ def receive():
         # SELF VOTE
         self_vote = requests.post(
             f"http://127.0.0.1:{PORT}/vote",
-            json=data
+            json=data,
+            timeout=2
         ).json()
 
         if self_vote["vote"] != "YES":
-            return jsonify({"status": "rejected_local"}), 403
+            return jsonify({
+                "status": "rejected_local",
+                "reason": self_vote.get("reason")
+            }), 403
 
-        # PEER VOTES
+        # PEERS
         votes = 1
         total = len(PEERS) + 1
 
@@ -186,7 +201,7 @@ def receive():
                 r = requests.post(f"{peer}/vote", json=data, timeout=2).json()
                 if r.get("vote") == "YES":
                     votes += 1
-            except:
+            except Exception:
                 print("⚠️ Peer offline:", peer)
 
         print(f"🗳️ Votes: {votes}/{total}")
@@ -204,9 +219,15 @@ def receive():
         # EXECUÇÃO
         result = f"[EXECUTED] {event['payload']}"
 
-        # ASSINATURAS
-        validator_sig = validator.sign(event_hash.encode())
+        # STATE ROOT
+        temp_ledger = ledger + [{
+            "event": event,
+            "hash": event_hash
+        }]
+        state_root = replay_ledger(temp_ledger)
 
+        # VALIDATORS
+        validator_sig = validator.sign(event_hash.encode())
         validators = [{
             "node": NODE_ID,
             "pub": validator.pub_hex(),
@@ -215,17 +236,22 @@ def receive():
 
         for peer in PEERS:
             try:
-                r = requests.post(f"{peer}/sign", json={"hash": event_hash}).json()
+                r = requests.post(
+                    f"{peer}/sign",
+                    json={"hash": event_hash},
+                    timeout=2
+                ).json()
                 validators.append(r)
-            except:
+            except Exception:
                 pass
 
-        # SALVAR
+        # PACKET FINAL
         packet = {
             "event": event,
             "hash": event_hash,
             "validators": validators,
-            "result": result
+            "result": result,
+            "state_root": state_root
         }
 
         ledger.append(packet)
@@ -236,32 +262,25 @@ def receive():
 
         print(f"✔ {NODE_ID} executou")
         print(f"🌳 MERKLE ROOT: {compute_root()}")
+        print(f"🧠 STATE ROOT: {state_root}")
 
         broadcast_sync()
 
         return jsonify({
             "status": "executed",
-            "hash": event_hash
+            "hash": event_hash,
+            "state_root": state_root
         })
 
     except Exception as e:
         print("Erro:", e)
         return jsonify({"status": "error", "error": str(e)}), 400
 
-state = DSANState()
-
-for entry in ledger:
-    state.apply(entry["event"])
-
-state_root = state.root()
-
-packet["state_root"] = state_root
-
 # ------------------------
 # SIGN
 # ------------------------
 
-@app.route('/sign', methods=['POST'])
+@app.route("/sign", methods=["POST"])
 def sign():
     data = request.get_json()
     h = data["hash"]
@@ -278,9 +297,9 @@ def sign():
 # SYNC
 # ------------------------
 
-@app.route('/sync', methods=['POST'])
+@app.route("/sync", methods=["POST"])
 def sync():
-    global ledger
+    global ledger, seen_hashes, seen_nonces
 
     try:
         data = request.get_json()
@@ -291,11 +310,14 @@ def sync():
         if not incoming_ledger:
             return jsonify({"status": "empty"}), 400
 
-        if incoming_root == compute_root():
+        local_root = compute_root()
+
+        if incoming_root == local_root:
             return jsonify({"status": "already_synced"})
 
         prev_hash = "0" * 64
 
+        # 1. validar cadeia + assinaturas
         for entry in incoming_ledger:
             if not validate_validators(entry):
                 return jsonify({"status": "invalid_validators"}), 400
@@ -311,22 +333,27 @@ def sync():
 
             prev_hash = stored_hash
 
+        # 2. validar state root
+        if any("state_root" not in e for e in incoming_ledger):
+            return jsonify({"status": "missing_state_root"}), 400
+
+        calculated_root = replay_ledger(incoming_ledger)
+        last_state_root = incoming_ledger[-1]["state_root"]
+
+        if calculated_root != last_state_root:
+            return jsonify({"status": "invalid_state"}), 400
+
+        # 3. regra de escolha
         if len(incoming_ledger) > len(ledger):
             ledger = incoming_ledger
             save_ledger()
+
+            seen_hashes = {entry["hash"] for entry in ledger}
+            seen_nonces = {entry["event"]["nonce"] for entry in ledger if "event" in entry and "nonce" in entry["event"]}
+
             print("🔄 Ledger substituído")
-        
+
         return jsonify({"status": "synced"})
-
-        calculated_root = replay_ledger(incoming_ledger)
-
-        if any("state_root" not in e for e in incoming_ledger):
-        return jsonify({"status": "missing_state_root"}), 400
-
-        last_state_root = incoming_ledger[-1]["state_root"]
-
-if calculated_root != last_state_root:
-    return jsonify({"status": "invalid_state"}), 400
 
     except Exception as e:
         print("❌ Sync erro:", e)

@@ -1,250 +1,350 @@
-# 🛡️ DSAN Core
+# DSAN-core
 
-### Decentralized Sovereign Agent Network — Core Implementation
+**DSAN-core** is the execution and verification kernel of the DSAN Network. It provides governed event execution, ledger persistence, deterministic replay, state-root verification, and local auditability for distributed execution flows.
 
-![License](https://img.shields.io/badge/license-Apache%202.0-blue)
+At its current stage, DSAN-core is not positioned as a production blockchain or Byzantine fault tolerant network. Instead, it is an experimental execution-governance core focused on verifiable action processing, replayable state reconstruction, and audit-oriented ledger design.
 
----
+## What DSAN-core does
 
-## 🧠 Overview
+DSAN-core currently supports:
 
-**DSAN Core** is the reference implementation of the **DSAN (Decentralized Sovereign Agent Network)** protocol.
+- Signed event creation through DSAN agents.
+- Canonical event hashing.
+- Policy-based event admission.
+- Majority-style peer voting.
+- Totem-gated execution authorization.
+- Local ledger persistence.
+- Merkle root computation over ledger hashes.
+- Deterministic replay into derived state.
+- `state_root` generation and verification.
+- Independent local audit via replay.
+- Ledger synchronization with structural validation.
 
-It provides the foundational building blocks required to create **sovereign digital agents** capable of:
+## Current architecture
 
-* cryptographic identity
-* authenticated communication
-* controlled execution
-* hybrid (cloud/off-cloud) operation
+The current kernel is organized around five logical layers.
 
-This repository focuses on **core primitives and architecture**, not full applications.
+## Auditor node
 
----
+DSAN-core now includes a dedicated **Auditor Node** role, separate from the executor node.
 
-## 🎯 Purpose
+The Auditor Node:
+- fetches `/ledger`, `/state`, `/root`, and `/state_root` from a target node,
+- validates ledger structure,
+- verifies canonical event hashes,
+- checks `prev_hash` continuity,
+- verifies validator signatures,
+- recalculates the Merkle root,
+- replays the ledger locally to recompute `state_root`,
+- compares local results against the remote node’s published commitments.
 
-The goal of DSAN Core is to:
+This creates a separation between:
+- **executor node**, which validates, executes, and persists events,
+- **auditor node**, which independently verifies historical integrity and derived state consistency.
 
-* validate the DSAN protocol in practice
-* provide a minimal and auditable implementation
-* establish a foundation for sovereign execution systems
+At the current validated stage, the Auditor Node has successfully confirmed:
+- structural ledger validity,
+- Merkle root consistency,
+- state root consistency,
+- independent replay agreement with the executor node.
 
----
+### Agent layer
+Agents create signed events containing:
+- `sender`
+- `payload`
+- `nonce`
+- `prev_hash`
 
-## 🧱 Architecture
+Each event is serialized canonically, signed with Ed25519, and hashed before submission.
+
+### Node layer
+A DSAN node:
+- receives candidate events,
+- verifies sender signature,
+- checks replay and chain continuity,
+- evaluates policy rules,
+- gathers local and peer votes,
+- requires Totem authorization,
+- executes the action,
+- signs the event hash as validator,
+- appends the final packet to the ledger.
+
+### Ledger layer
+Each persisted packet may contain:
+- `event`
+- `hash`
+- `validators`
+- `result`
+- `state_root`
+
+The ledger acts as both execution history and replay substrate.
+
+### Replay layer
+The replay engine rebuilds state from ledger history by applying all events in sequence. This produces a deterministic `state_root` that can be independently verified.
+
+### Audit layer
+An auditor can:
+- fetch the ledger,
+- recompute the state locally,
+- compare the recomputed `state_root` with the node’s published `state_root`,
+- verify whether execution history and published state are consistent.
+
+## Execution flow
+
+The current execution flow is:
+
+1. Agent creates a signed event.
+2. Node receives the event.
+3. Node validates hash, signature, nonce, and chain continuity.
+4. Node applies policy checks.
+5. Node gathers local and peer votes.
+6. Node requests Totem authorization.
+7. Node executes the event.
+8. Node computes the resulting `state_root`.
+9. Node collects validator signatures.
+10. Node appends the packet to the ledger.
+11. Node exposes ledger, Merkle root, and state root for verification.
+
+## Verified properties
+
+At the current recovered stage, DSAN-core demonstrates:
+
+- **Canonical event hashing**
+- **Replayable ledger history**
+- **Derived state verification**
+- **Per-entry `state_root` normalization**
+- **State-root consistency checks**
+- **Independent local auditability**
+
+This means a third party can recompute the final state derived from ledger history instead of trusting only the node’s live execution response.
+
+## Repository structure
+
+Current modules are conceptually aligned with:
 
 ```text
-dsan-core/
-├── dsan/
-│   ├── crypto/
-│   │   ├── identity.py
-│   │   ├── handshake.py
-│   │
-│   ├── agent/
-│   │   ├── agent.py
-│   │
-│   ├── network/
-│   │   ├── node.py
-│   │   ├── transport.py
-│
-├── examples/
-├── tests/
-├── main.py
-├── requirements.txt
-├── LICENSE
-└── README.md
+dsan/
+├── agent/
+│   └── agent.py
+├── core/
+│   ├── context.py
+│   ├── replay.py
+│   └── state.py
+├── crypto/
+│   ├── merkle.py
+│   └── validator.py
+├── epl/
+│   └── policy.py
+├── network/
+│   └── node.py
+└── totem/
+    └── totem.py
 ```
 
----
+Typical local helper scripts used in validation:
 
-## 🔐 Core Capabilities
+```text
+clisend.py
+cliaudit.py
+migrate_state_roots.py
+ledger_node1.json
+```
 
-### ✔ Cryptographic Identity
+## Quick start
 
-* Ed25519-based identity
-* message signing
-
-### ✔ Secure Key Exchange
-
-* X25519 Diffie-Hellman
-* HKDF key derivation
-
-### ✔ Authenticated Messaging
-
-* signed payloads
-* integrity validation
-
-### ✔ Minimal Network Layer
-
-* TCP communication
-* structured transport
-
----
-
-## 🌐 Execution Context Layer (ECL)
-
-DSAN introduces an **Execution Context Layer (ECL)** that defines how and where agents operate.
-
-### 🟢 On-Cloud Mode
-
-* connected execution
-* integration with external systems
-* scalable and interoperable
-
-### 🔴 Off-Cloud Mode
-
-* fully local execution
-* no external dependencies
-* resilient to network failure or censorship
-
-### 🟡 Hybrid Mode
-
-* dynamic switching between contexts
-* local sovereignty with optional synchronization
-
-> DSAN is not cloud-dependent.
-> It is **cloud-adaptive**.
-
----
-
-## 🧬 Totem Layer (TL)
-
-The **Totem Layer** represents the physical or hardware-bound component of the DSAN architecture.
-
-It is responsible for anchoring digital execution to **real-world control**.
-
-### Core Functions
-
-* 🔐 Identity anchoring (non-exportable control)
-* 🧍 Human or physical validation (gesture, biometrics, presence)
-* ⚡ Execution authorization
-* 🧱 Off-cloud operational capability
-
-> The Totem is not optional.
-> It is the mechanism that prevents purely virtual capture of the system.
-
----
-
-## ⚙️ Conceptual Flow
-
-1. Agent identity is created (cryptographic layer)
-2. Totem validates authorization (physical layer)
-3. Execution context is determined (ECL)
-4. Action is executed (local or networked)
-
----
-
-## 🚀 Getting Started
-
-### 1. Clone the repository
+### 1. Start a local node
 
 ```bash
-git clone https://github.com/dsan-network/dsan-core.git
-cd dsan-core
+python -m dsan.network.node node1 5001
 ```
 
----
+This starts a local DSAN node on `127.0.0.1:5001`.
 
-### 2. Install dependencies
+### 2. Check basic endpoints
 
 ```bash
-pip install -r requirements.txt
+curl http://127.0.0.1:5001/state
+curl http://127.0.0.1:5001/root
+curl http://127.0.0.1:5001/state_root
+curl http://127.0.0.1:5001/ledger
 ```
 
----
+### 3. Submit an event
 
-### 3. Run a node
+Example `clisend.py`:
+
+```python
+import requests
+from dsan.agent.agent import DSANAgent
+
+NODE_URL = "http://127.0.0.1:5001"
+
+agent = DSANAgent("alice")
+
+state = requests.get(f"{NODE_URL}/state").json()
+prev_hash = state["last_hash"]
+
+packet = agent.create_event(
+    {
+        "type": "transfer",
+        "from": "alice",
+        "to": "bob",
+        "amount": 10
+    },
+    prev_hash
+)
+
+response = requests.post(f"{NODE_URL}/receive", json=packet)
+
+print("status:", response.status_code)
+print("body:", response.json())
+```
+
+Run:
 
 ```bash
-python dsan/network/node.py
+python clisend.py
 ```
 
----
+### 4. Audit the node independently
 
-### 4. Send a message
+Example `cliaudit.py`:
+
+```python
+import requests
+from dsan.core.replay import replay_ledger
+
+NODE_URL = "http://127.0.0.1:5001"
+
+ledger = requests.get(f"{NODE_URL}/ledger").json()
+root_info = requests.get(f"{NODE_URL}/root").json()
+state_info = requests.get(f"{NODE_URL}/state_root").json()
+state_meta = requests.get(f"{NODE_URL}/state").json()
+
+replayed_state_root = replay_ledger(ledger)
+node_state_root = state_info["state_root"]
+
+print("=== DSAN AUDIT REPORT ===")
+print("ledger_size:", state_meta["ledger_size"])
+print("last_hash:", state_meta["last_hash"])
+print("merkle_root:", root_info["root"])
+print("node_state_root:", node_state_root)
+print("replayed_state_root:", replayed_state_root)
+
+if ledger:
+    last_entry = ledger[-1]
+    packet_state_root = last_entry.get("state_root")
+    print("packet_state_root:", packet_state_root)
+
+    if packet_state_root is None:
+        print("packet_state_root_check: MISSING")
+    elif packet_state_root == replayed_state_root:
+        print("packet_state_root_check: OK")
+    else:
+        print("packet_state_root_check: MISMATCH")
+else:
+    print("packet_state_root: EMPTY_LEDGER")
+
+if node_state_root == replayed_state_root:
+    print("audit_result: CONSISTENT")
+else:
+    print("audit_result: MISMATCH")
+```
+
+Run:
 
 ```bash
-python main.py
+python cliaudit.py
+```
+### 5. Run the Auditor Node
+
+Start the auditor service:
+
+```bash
+python -m dsan.auditor.node
 ```
 
----
+In another terminal, audit a running executor node:
 
-## ⚠️ Current Limitations
+```bash
+curl "http://127.0.0.1:5010/audit?target=http://127.0.0.1:5001"
+```
 
-This is a **reference implementation**, not production-ready.
+A successful response should include:
 
-Missing components include:
+- `structure_valid: true`
+- `merkle_root_match: true`
+- `state_root_match: true`
+- `audit_result: CONSISTENT`
 
-* signature verification at node level
-* encrypted transport (E2EE)
-* persistent identity (Totem-backed storage)
-* full Totem integration
-* Execution Policy Layer (EPL)
-* distributed coordination
-* ledger currently local to agent (not globally synchronized)
-* no consensus or fork resolution
-* nodes do not enforce global state continuity
----
+This confirms that the remote node’s ledger, Merkle root, and derived state are independently verifiable.
 
-## 🧠 Roadmap
+### 6. Normalize old ledger entries
 
-* [ ] Signature verification
-* [ ] End-to-end encryption
-* [ ] Totem integration (hardware layer)
-* [ ] Execution Policy Layer (EPL)
-* [ ] Hybrid execution logic
-* [ ] Multi-node communication
+If older ledger entries do not yet contain `state_root`, use `migrate_state_roots.py` to normalize historical packets.
 
----
+Run:
 
-## 🌐 DSAN Ecosystem
+```bash
+python migrate_state_roots.py ledger_node1.json
+```
 
-This repository is part of the DSAN Network.
+This recalculates progressive `state_root` values and updates legacy entries.
 
-Core protocol:
-👉 https://github.com/dsan-network/dsan-ecosystem
+## Current status
 
----
+This repository reflects a **recovered and stabilized execution kernel** evolved beyond the original simulator stage.
 
-## ⚖️ License
+Validated properties in the recovered branch include:
 
-This project is licensed under the Apache License 2.0.
+- node startup and endpoint availability,
+- persisted ledger loading,
+- event submission and execution,
+- deterministic replay,
+- `state_root` consistency,
+- historical ledger normalization,
+- successful local audit with `CONSISTENT` result.
+- dedicated Auditor Node startup,
+- remote independent audit,
+- validator-signature verification in the auditor,
+- Merkle root recomputation and comparison,
+- successful auditor result with `CONSISTENT`.
 
----
+## Limitations
 
-## ⚠️ Intellectual Property Notice
+DSAN-core remains experimental and has important limitations:
 
-This repository provides a **reference implementation** of the DSAN protocol.
+- no Byzantine fault tolerant consensus,
+- no asynchronous consensus engine,
+- no persistent validator identity governance,
+- no finalized membership model,
+- Totem may still be mocked depending on environment,
+- policy semantics are still evolving,
+- audit is local and developer-oriented, not yet a standalone production verifier.
 
-Certain components are intentionally not included, including:
+## Development direction
 
-* Execution Policy Layer (EPL)
-* applied systems (e.g., RadSecure, DSAN-DREX)
-* production deployment strategies
+The most logical next steps are:
 
-These may be subject to intellectual property protection.
+- dedicated auditor-node mode,
+- persistent validator identity model,
+- stricter sync validation across normalized ledger history,
+- formal EPL / JSON policy definitions,
+- clearer execution/state separation,
+- protocol-level documentation,
+- integration path into broader DSAN Network services.
 
----
+## Positioning
 
-## 🤝 Contributing
+DSAN-core should be understood as a **verifiable execution kernel**, not merely a blockchain prototype.
 
-Contributions are welcome in:
+Its central purpose is to make governed execution:
+- replayable,
+- state-derivable,
+- externally auditable,
+- structurally verifiable.
 
-* cryptography
-* distributed systems
-* secure networking
-* protocol engineering
+## Disclaimer
 
----
-
-## 📬 Contact
-
-Alessandro Turok da Silva Collares
-DSAN Network
-
----
-
-## 🧩 Vision
-
-> To establish a foundational infrastructure where digital agents operate with cryptographic sovereignty, physical authorization, and adaptive execution across cloud and non-cloud environments.
+This project is under active architectural evolution. Interfaces, packet structure, and verification logic may change as the core stabilizes.
 
