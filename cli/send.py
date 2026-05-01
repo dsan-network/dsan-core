@@ -1,20 +1,24 @@
 import requests
 from dsan.agent.agent import DSANAgent
 
+NODE_URL = "http://127.0.0.1:5001"
+
 agent = DSANAgent("alice")
 
-# 🔗 pega último hash do node
-res = requests.get("http://127.0.0.1:5001/last_hash").json()
-prev_hash = res["last_hash"]
+state = requests.get(f"{NODE_URL}/state").json()
+prev_hash = state["last_hash"]
 
 packet = agent.create_event(
-    {"msg": "transfer_funds"},
+    {
+        "type": "transfer",
+        "from": "alice",
+        "to": "bob",
+        "amount": 10
+    },
     prev_hash
 )
 
-res = requests.post(
-    "http://127.0.0.1:5001/receive",
-    json=packet
-)
+response = requests.post(f"{NODE_URL}/receive", json=packet)
 
-print(res.json())
+print("status:", response.status_code)
+print("body:", response.json())
