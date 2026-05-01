@@ -7,3 +7,8 @@ __pycache__/
 *.pyc
 ledger_node1.json
 ledger_node1.json.bak
+
+__pycache__/
+*.pyc
+ledger_node1.json
+ledger_node1.json.bak
