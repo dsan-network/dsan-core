@@ -21,7 +21,8 @@
         "sig": "60e6c66a10e2f92a76c1266464cc510ccbed6f69a66434934ce87066855575031bd73e7d97874d34d8a3781c10513aba5d31dd67731d262b415a73d71d652402"
       }
     ],
-    "result": "[EXECUTED] {'msg': 'transfer_funds'}"
+    "result": "[EXECUTED] {'msg': 'transfer_funds'}",
+    "state_root": "90b3b3275271cab22df5e78f43bbf0a0c0c21fd47105a986908873fd7fd738b3"
   },
   {
     "event": {
@@ -45,6 +46,7 @@
         "sig": "36525f5b72b625a22c3c98d7a8999f26d934287dc3ebc18e5166bfa1f3cd28693e6d28de057a07f03118bf6ef32f74419d82c015914b0fc3ac9ccb25aeea3f02"
       }
     ],
-    "result": "[EXECUTED] {'msg': 'transfer_funds'}"
+    "result": "[EXECUTED] {'msg': 'transfer_funds'}",
+    "state_root": "90b3b3275271cab22df5e78f43bbf0a0c0c21fd47105a986908873fd7fd738b3"
   }
 ]
