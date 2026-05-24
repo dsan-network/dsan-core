@@ -1,4 +1,5 @@
 # DSAN-core
+> Also available in Portuguese (Brazil): [README.pt-BR.md](README.pt-BR.md)
 
 **DSAN-core** is the execution and verification kernel of the DSAN Network. It provides governed event execution, ledger persistence, deterministic replay, state-root verification, and local auditability for distributed execution flows.
 
@@ -49,6 +50,7 @@ At the current validated stage, the Auditor Node has successfully confirmed:
 - independent replay agreement with the executor node.
 
 ### Agent layer
+
 Agents create signed events containing:
 - `sender`
 - `payload`
@@ -58,6 +60,7 @@ Agents create signed events containing:
 Each event is serialized canonically, signed with Ed25519, and hashed before submission.
 
 ### Node layer
+
 A DSAN node:
 - receives candidate events,
 - verifies sender signature,
@@ -70,6 +73,7 @@ A DSAN node:
 - appends the final packet to the ledger.
 
 ### Ledger layer
+
 Each persisted packet may contain:
 - `event`
 - `hash`
@@ -80,9 +84,11 @@ Each persisted packet may contain:
 The ledger acts as both execution history and replay substrate.
 
 ### Replay layer
+
 The replay engine rebuilds state from ledger history by applying all events in sequence. This produces a deterministic `state_root` that can be independently verified.
 
 ### Audit layer
+
 An auditor can:
 - fetch the ledger,
 - recompute the state locally,
@@ -120,35 +126,33 @@ This means a third party can recompute the final state derived from ledger histo
 
 ## Repository structure
 
-Current modules are conceptually aligned with:
+The repository is currently organized around the DSAN-core execution kernel and its supporting validation tools.
 
 ```text
-dsan/
-├── agent/
-│   └── agent.py
-├── core/
-│   ├── context.py
-│   ├── replay.py
-│   └── state.py
-├── crypto/
-│   ├── merkle.py
-│   └── validator.py
-├── epl/
-│   └── policy.py
-├── network/
-│   └── node.py
-└── totem/
-    └── totem.py
+dsan-core/
+├── README.md
+├── README.pt-BR.md
+├── CHANGELOG.md
+├── LICENSE
+├── RELEASE_CHECKLIST.md
+├── KNOWN_ISSUES.md
+├── clisend.py
+├── cliaudit.py
+├── migrate_state_roots.py
+├── ledger_node1.json
+├── dsan/
+├── api/
+├── cli/
+├── docs/
+└── data/
 ```
 
-Typical local helper scripts used in validation:
-
-```text
-clisend.py
-cliaudit.py
-migrate_state_roots.py
-ledger_node1.json
-```
+Main areas:
+- `dsan/` contains the core execution, replay, audit, network, policy, and Totem logic.
+- `clisend.py` and `cliaudit.py` provide local helper flows for submission and audit.
+- `migrate_state_roots.py` is used to normalize historical ledger entries.
+- `ledger_node1.json` is the main local ledger used in validation and replay checks.
+- `docs/`, `api/`, `cli/`, and `data/` are support directories for documentation, interface support, command-line utilities, and local data artifacts.
 
 ## Quick start
 
@@ -256,6 +260,7 @@ Run:
 ```bash
 python cliaudit.py
 ```
+
 ### 5. Run the Auditor Node
 
 Start the auditor service:
@@ -279,7 +284,116 @@ A successful response should include:
 
 This confirms that the remote node’s ledger, Merkle root, and derived state are independently verifiable.
 
-### 6. Normalize old ledger entries
+### 6. Manual end-to-end test with Totem
+
+This flow validates event submission, Totem-gated execution, ledger persistence, and independent auditor verification.
+
+#### Start the executor node
+
+```bash
+python -m dsan.network.node node1 5001
+```
+
+#### Start the auditor node
+
+```bash
+python -m dsan.auditor.node
+```
+
+#### Generate a signed event
+
+Create `send_event.py`:
+
+```python
+import json
+import time
+import hashlib
+import requests
+from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives import serialization
+
+def canonical_json(data):
+    return json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+def hash_event(event):
+    return hashlib.sha256(canonical_json(event).encode()).hexdigest()
+
+state = requests.get("http://127.0.0.1:5001/state", timeout=2).json()
+prev_hash = state["last_hash"]
+
+event = {
+    "nonce": str(int(time.time() * 1000)),
+    "payload": {"msg": "transfer_funds"},
+    "prev_hash": prev_hash,
+    "sender": "alice"
+}
+
+sender_sk = ed25519.Ed25519PrivateKey.generate()
+sender_pk = sender_sk.public_key()
+
+packet = {
+    "event": event,
+    "hash": hash_event(event),
+    "signature": sender_sk.sign(canonical_json(event).encode()).hex(),
+    "sender_sig_pub": sender_pk.public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw
+    ).hex()
+}
+
+with open("event.json", "w", encoding="utf-8") as f:
+    json.dump(packet, f, ensure_ascii=False, indent=2)
+
+print("event.json generated")
+print("prev_hash =", prev_hash)
+print("new_hash =", packet["hash"])
+print("nonce =", packet["event"]["nonce"])
+```
+
+Run:
+
+```bash
+python send_event.py
+cat event.json
+```
+
+#### Submit the event
+
+```bash
+curl -X POST http://127.0.0.1:5001/receive -H "Content-Type: application/json" -d @event.json
+```
+
+#### Authorize on the Totem
+
+When the executor node terminal shows:
+
+```bash
+🔐 Totem gesture (ex: 120):
+```
+
+enter:
+
+```bash
+120
+```
+
+#### Validate node state and audit result
+
+```bash
+curl http://127.0.0.1:5001/state
+curl http://127.0.0.1:5001/ledger
+curl "http://127.0.0.1:5010/audit?target=http://127.0.0.1:5001"
+```
+
+Expected result:
+- `ledger_size` increases by 1,
+- `last_hash` changes,
+- the new packet appears in `/ledger`,
+- the auditor returns `audit_result: CONSISTENT`.
+
+> Note: the correct ingestion endpoint is `/receive`. The POST request only completes after the correct Totem gesture is entered in the executor node terminal. Re-submitting the same `event.json` may return `{"status":"duplicate"}`.
+
+### 7. Normalize old ledger entries
 
 If older ledger entries do not yet contain `state_root`, use `migrate_state_roots.py` to normalize historical packets.
 
@@ -303,7 +417,7 @@ Validated properties in the recovered branch include:
 - deterministic replay,
 - `state_root` consistency,
 - historical ledger normalization,
-- successful local audit with `CONSISTENT` result.
+- successful local audit with `CONSISTENT` result,
 - dedicated Auditor Node startup,
 - remote independent audit,
 - validator-signature verification in the auditor,
@@ -318,7 +432,7 @@ DSAN-core remains experimental and has important limitations:
 - no asynchronous consensus engine,
 - no persistent validator identity governance,
 - no finalized membership model,
-- Totem may still be mocked depending on environment,
+- Totem authorization is interactive and currently terminal-bound,
 - policy semantics are still evolving,
 - audit is local and developer-oriented, not yet a standalone production verifier.
 
