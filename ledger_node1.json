@@ -1,0 +1,52 @@
+[
+  {
+    "event": {
+      "sender": "alice",
+      "payload": {
+        "msg": "transfer_funds"
+      },
+      "nonce": "1776568433136",
+      "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "hash": "62b701cb62d0e2070e9d86006590464944c0304f8cbe9a50574a041ddb7abad8",
+    "validators": [
+      {
+        "node": "node1",
+        "pub": "1d7533b1a1a5aa46bc731721592723f46c317b7b46bc33d7202e9805147fdc4f",
+        "sig": "d2d39a163376256f48c5da314b63da256e7ae519668b80cf265decda95dcce04f48e125aae92c7122daf553ad3031a9d97efe0512d07519065aa4b61f02d420a"
+      },
+      {
+        "node": "node2",
+        "pub": "e193e772a168d661a658706d44f797383733f3ed2ba720fbaee3da2253489e36",
+        "sig": "60e6c66a10e2f92a76c1266464cc510ccbed6f69a66434934ce87066855575031bd73e7d97874d34d8a3781c10513aba5d31dd67731d262b415a73d71d652402"
+      }
+    ],
+    "result": "[EXECUTED] {'msg': 'transfer_funds'}",
+    "state_root": "90b3b3275271cab22df5e78f43bbf0a0c0c21fd47105a986908873fd7fd738b3"
+  },
+  {
+    "event": {
+      "sender": "alice",
+      "payload": {
+        "msg": "transfer_funds"
+      },
+      "nonce": "1776568486513",
+      "prev_hash": "62b701cb62d0e2070e9d86006590464944c0304f8cbe9a50574a041ddb7abad8"
+    },
+    "hash": "03a0b3ee8285e7ed54acd453500037761c50af596d27814755024e3e34032d7d",
+    "validators": [
+      {
+        "node": "node1",
+        "pub": "1d7533b1a1a5aa46bc731721592723f46c317b7b46bc33d7202e9805147fdc4f",
+        "sig": "da4378593b018c8397b1045ae6f6afe7c5d991dc23571810c1313421bc8548b9b7d906d8cd9f9ee64b7ea63cd4650c06c8f56503de5e4ca29eeead84210cc309"
+      },
+      {
+        "node": "node2",
+        "pub": "e193e772a168d661a658706d44f797383733f3ed2ba720fbaee3da2253489e36",
+        "sig": "36525f5b72b625a22c3c98d7a8999f26d934287dc3ebc18e5166bfa1f3cd28693e6d28de057a07f03118bf6ef32f74419d82c015914b0fc3ac9ccb25aeea3f02"
+      }
+    ],
+    "result": "[EXECUTED] {'msg': 'transfer_funds'}",
+    "state_root": "90b3b3275271cab22df5e78f43bbf0a0c0c21fd47105a986908873fd7fd738b3"
+  }
+]

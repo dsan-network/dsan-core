@@ -1,248 +1,384 @@
-# 🛡️ DSAN Core
+# 🛡️ DSAN-core
 
-### Decentralized Sovereign Agent Network — Core Implementation
+**The Verifiable Execution Kernel of the DSAN Network**
 
-![License](https://img.shields.io/badge/license-Apache%202.0-blue)
-
----
-
-## 🧠 Overview
-
-**DSAN Core** is the reference implementation of the **DSAN (Decentralized Sovereign Agent Network)** protocol.
-
-It provides the foundational building blocks required to create **sovereign digital agents** capable of:
-
-* cryptographic identity
-* authenticated communication
-* controlled execution
-* hybrid (cloud/off-cloud) operation
-
-This repository focuses on **core primitives and architecture**, not full applications.
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
 ---
 
-## 🎯 Purpose
+# Why DSAN-core Exists
 
-The goal of DSAN Core is to:
+Modern distributed systems have become increasingly capable of making autonomous decisions.
 
-* validate the DSAN protocol in practice
-* provide a minimal and auditable implementation
-* establish a foundation for sovereign execution systems
+They can authenticate identities, exchange encrypted messages, interact with external systems and execute actions automatically.
+
+However, one architectural problem remains largely unresolved:
+
+> **Who governs execution?**
+
+Most systems implicitly assume:
+
+```
+Decision → Execution
+```
+
+As intelligent systems become more autonomous, this assumption becomes increasingly unsafe.
+
+DSAN-core was created to introduce an explicit execution-governance layer between decision and execution.
+
+Instead of automatically executing every valid request, DSAN-core requires that execution be:
+
+- cryptographically attributable,
+- policy validated,
+- consensus approved,
+- physically authorized,
+- replayable,
+- independently auditable.
+
+Rather than functioning as another blockchain, DSAN-core is designed as a **verifiable execution kernel**, capable of reconstructing its execution state entirely from recorded history.
 
 ---
 
-## 🧱 Architecture
+# What DSAN-core Does
 
-```text
-dsan-core/
-├── dsan/
-│   ├── crypto/
-│   │   ├── identity.py
-│   │   ├── handshake.py
-│   │
-│   ├── agent/
-│   │   ├── agent.py
-│   │
-│   ├── network/
-│   │   ├── node.py
-│   │   ├── transport.py
-│
-├── examples/
-├── tests/
-├── main.py
-├── requirements.txt
-├── LICENSE
-└── README.md
+DSAN-core currently implements:
+
+- Digital identity based on Ed25519
+- Canonical event hashing
+- Signed event submission
+- Policy-based execution validation
+- Majority-style peer approval
+- Totem-gated execution authorization
+- Local append-only ledger
+- Merkle Root computation
+- Deterministic replay engine
+- Derived `state_root`
+- Independent audit through replay
+- Ledger synchronization with structural validation
+
+The objective is not merely to record events, but to ensure that executed history can always be reconstructed into an independently verifiable state.
+
+---
+
+# Architectural Overview
+
+The current architecture is organized into six logical layers.
+
+```
+Agent
+   │
+   ▼
+Policy Validation (EPL)
+   │
+   ▼
+Consensus
+   │
+   ▼
+Totem Authorization
+   │
+   ▼
+Execution
+   │
+   ▼
+Ledger
+   │
+   ▼
+Replay Engine
+   │
+   ▼
+State Root
+   │
+   ▼
+Independent Audit
+```
+
+Every executed action follows this deterministic verification pipeline.
+
+---
+
+# Core Components
+
+## Agent Layer
+
+Agents are responsible for creating signed execution requests.
+
+Each event contains:
+
+- sender identity
+- payload
+- nonce
+- previous ledger hash
+
+The event is canonically serialized, signed using Ed25519 and hashed before submission.
+
+---
+
+## Policy Layer (EPL)
+
+The Execution Policy Layer evaluates whether an action is admissible before execution.
+
+Policy validation occurs before consensus and before any state transition.
+
+Current implementations include simple rule evaluation, while future versions will support formal policy definitions.
+
+---
+
+## Consensus Layer
+
+Nodes exchange approval votes before execution.
+
+The current implementation uses a lightweight majority-based coordination mechanism suitable for development and experimentation.
+
+This layer is intentionally separated from execution itself.
+
+---
+
+## Totem Layer
+
+The Totem represents the physical authorization boundary of the DSAN architecture.
+
+While cryptography proves identity, the Totem proves execution control.
+
+Execution only proceeds after explicit authorization through the Totem.
+
+Current implementations support manual authorization during development, while future versions will integrate dedicated hardware (DSAN Guardian), biometrics and secure cryptographic elements.
+
+The Totem transforms execution from a purely digital operation into a physically accountable action.
+
+---
+
+## Ledger Layer
+
+Each executed event is stored as an immutable ledger entry containing:
+
+- original event
+- event hash
+- validator signatures
+- execution result
+- replay-derived state root
+
+The ledger serves simultaneously as execution history and replay substrate.
+
+---
+
+## Replay Layer
+
+The replay engine reconstructs system state exclusively from ledger history.
+
+Events are applied deterministically in sequence.
+
+The resulting state is serialized canonically and hashed, producing the final `state_root`.
+
+Because replay is deterministic, any third party can independently verify the resulting state.
+
+---
+
+# Why Replay Matters
+
+Traditional systems require trusting the current state maintained by a running server.
+
+DSAN-core removes that dependency.
+
+Instead, any verifier can rebuild the complete execution state directly from ledger history.
+
+This enables:
+
+- deterministic verification
+- historical reproducibility
+- state commitments
+- independent auditing
+- replay consistency validation
+
+---
+
+# Why Totem Exists
+
+Most distributed systems treat cryptographic identity as sufficient authorization.
+
+DSAN separates these concepts.
+
+A valid signature proves **who requested** an action.
+
+The Totem proves **that execution was intentionally authorized**.
+
+This additional authorization boundary significantly reduces the risk of uncontrolled remote execution in sensitive environments.
+
+---
+
+# Repository Structure
+
+```
+dsan/
+├── agent/
+├── core/
+│   ├── context.py
+│   ├── replay.py
+│   └── state.py
+├── crypto/
+├── epl/
+├── network/
+└── totem/
+
+docs/
+├── ARCHITECTURE.md
+├── PROTOCOL.md
+└── ROADMAP.md
+
+clisend.py
+cliaudit.py
+migrate_state_roots.py
 ```
 
 ---
 
-## 🔐 Core Capabilities
+# Typical Execution Flow
 
-### ✔ Cryptographic Identity
-
-* Ed25519-based identity
-* message signing
-
-### ✔ Secure Key Exchange
-
-* X25519 Diffie-Hellman
-* HKDF key derivation
-
-### ✔ Authenticated Messaging
-
-* signed payloads
-* integrity validation
-
-### ✔ Minimal Network Layer
-
-* TCP communication
-* structured transport
+1. An Agent creates a signed event.
+2. The Node validates the sender signature.
+3. The event hash is recomputed.
+4. Replay protection is checked.
+5. Policy rules are evaluated.
+6. Peer approval is requested.
+7. The Totem authorizes execution.
+8. The action is executed.
+9. Validators sign the event.
+10. A new ledger packet is persisted.
+11. The `state_root` is updated.
+12. The node exposes the new state for independent verification.
 
 ---
 
-## 🌐 Execution Context Layer (ECL)
+# Getting Started
 
-DSAN introduces an **Execution Context Layer (ECL)** that defines how and where agents operate.
-
-### 🟢 On-Cloud Mode
-
-* connected execution
-* integration with external systems
-* scalable and interoperable
-
-### 🔴 Off-Cloud Mode
-
-* fully local execution
-* no external dependencies
-* resilient to network failure or censorship
-
-### 🟡 Hybrid Mode
-
-* dynamic switching between contexts
-* local sovereignty with optional synchronization
-
-> DSAN is not cloud-dependent.
-> It is **cloud-adaptive**.
-
----
-
-## 🧬 Totem Layer (TL)
-
-The **Totem Layer** represents the physical or hardware-bound component of the DSAN architecture.
-
-It is responsible for anchoring digital execution to **real-world control**.
-
-### Core Functions
-
-* 🔐 Identity anchoring (non-exportable control)
-* 🧍 Human or physical validation (gesture, biometrics, presence)
-* ⚡ Execution authorization
-* 🧱 Off-cloud operational capability
-
-> The Totem is not optional.
-> It is the mechanism that prevents purely virtual capture of the system.
-
----
-
-## ⚙️ Conceptual Flow
-
-1. Agent identity is created (cryptographic layer)
-2. Totem validates authorization (physical layer)
-3. Execution context is determined (ECL)
-4. Action is executed (local or networked)
-
----
-
-## 🚀 Getting Started
-
-### 1. Clone the repository
+## Start a local node
 
 ```bash
-git clone https://github.com/dsan-network/dsan-core.git
-cd dsan-core
+python -m dsan.network.node node1 5001
 ```
 
 ---
 
-### 2. Install dependencies
+## Submit an event
 
 ```bash
-pip install -r requirements.txt
+python clisend.py
 ```
 
 ---
 
-### 3. Run a node
+## Authorize execution
+
+When prompted by the node:
+
+```
+🔐 Totem gesture:
+```
+
+perform the requested authorization.
+
+Current development versions use manual confirmation.
+
+Future versions will use the DSAN Guardian hardware device.
+
+---
+
+## Audit the node
 
 ```bash
-python dsan/network/node.py
+python cliaudit.py
 ```
 
----
-
-### 4. Send a message
-
-```bash
-python main.py
-```
+The auditor independently reconstructs the state from ledger history and verifies consistency.
 
 ---
 
-## ⚠️ Current Limitations
+# Current Status
 
-This is a **reference implementation**, not production-ready.
+The current implementation successfully demonstrates:
 
-Missing components include:
+- deterministic event execution
+- append-only ledger persistence
+- replay-based state reconstruction
+- derived state verification
+- per-entry `state_root`
+- independent local audit
+- structural ledger synchronization
 
-* signature verification at node level
-* encrypted transport (E2EE)
-* persistent identity (Totem-backed storage)
-* full Totem integration
-* Execution Policy Layer (EPL)
-* distributed coordination
-
----
-
-## 🧠 Roadmap
-
-* [ ] Signature verification
-* [ ] End-to-end encryption
-* [ ] Totem integration (hardware layer)
-* [ ] Execution Policy Layer (EPL)
-* [ ] Hybrid execution logic
-* [ ] Multi-node communication
+The repository currently represents a recovered and stabilized execution kernel suitable for further protocol evolution.
 
 ---
 
-## 🌐 DSAN Ecosystem
+# Current Limitations
 
-This repository is part of the DSAN Network.
+DSAN-core remains experimental.
 
-Core protocol:
-👉 https://github.com/dsan-network/dsan-ecosystem
+The current implementation does **not** yet provide:
 
----
+- Byzantine Fault Tolerant consensus
+- production-grade network transport
+- persistent validator identity
+- finalized governance model
+- production Totem hardware integration
+- complete Execution Policy Language (EPL)
 
-## ⚖️ License
-
-This project is licensed under the Apache License 2.0.
-
----
-
-## ⚠️ Intellectual Property Notice
-
-This repository provides a **reference implementation** of the DSAN protocol.
-
-Certain components are intentionally not included, including:
-
-* Execution Policy Layer (EPL)
-* applied systems (e.g., RadSecure, DSAN-DREX)
-* production deployment strategies
-
-These may be subject to intellectual property protection.
+These capabilities are planned in future development stages.
 
 ---
 
-## 🤝 Contributing
+# Documentation
 
-Contributions are welcome in:
+Additional documentation is available in the `docs/` directory.
 
-* cryptography
-* distributed systems
-* secure networking
-* protocol engineering
-
----
-
-## 📬 Contact
-
-Alessandro Turok da Silva Collares
-DSAN Network
+- **ARCHITECTURE.md** — System architecture
+- **PROTOCOL.md** — Packet structure and protocol behavior
+- **ROADMAP.md** — Planned evolution of the project
 
 ---
 
-## 🧩 Vision
+# Positioning
 
-> To establish a foundational infrastructure where digital agents operate with cryptographic sovereignty, physical authorization, and adaptive execution across cloud and non-cloud environments.
+DSAN-core should not be understood as another blockchain implementation.
+
+Its primary purpose is to provide a **verifiable execution kernel** where execution becomes:
+
+- cryptographically attributable,
+- policy governed,
+- physically authorizable,
+- replayable,
+- independently auditable.
+
+Execution itself becomes a verifiable system primitive.
+
+---
+
+# Part of the DSAN Ecosystem
+
+DSAN-core is one component of the broader **DSAN Network**.
+
+The ecosystem includes:
+
+- **DSAN Ecosystem** — Architectural framework
+- **DSAN-core** — Verifiable execution kernel
+- **DSAN Guardian** — Physical authorization layer
+- Domain-specific systems such as **RadSecure**
+
+Together these components establish an architecture for governed execution in autonomous and distributed systems.
+
+---
+
+# Intellectual Property Notice
+
+DSAN-core is released under the Apache 2.0 License.
+
+Certain implementation details, hardware designs, execution models and domain-specific applications may be subject to ongoing intellectual property protection and are intentionally omitted from the public implementation.
+
+---
+
+# Research Vision
+
+As autonomous systems become increasingly capable of acting without human intervention, execution itself must become accountable.
+
+DSAN-core explores a future in which every executed action can be independently verified, contextually governed and physically authorized.
+
+Its long-term objective is to establish execution as a first-class, auditable and sovereign capability of distributed intelligent systems.
 
