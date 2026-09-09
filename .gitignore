@@ -1,17 +1,9 @@
 data/
 __pycache__/
 *.pyc
-ledger_node1.json
-ledger_node1.json.bak
-__pycache__/
-*.pyc
-ledger_node1.json
-ledger_node1.json.bak
 
-__pycache__/
-*.pyc
 ledger_node1.json
 ledger_node1.json.bak
+ledger_node2.json
 
-__pycache__/
-*.pyc
+totem.key
