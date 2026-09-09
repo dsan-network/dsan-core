@@ -1,463 +1,572 @@
-# DSAN-core
-> Também disponível em inglês: [README.md](README.md)
+# DSAN Core
 
-**DSAN-core** é o núcleo de execução e verificação da Rede DSAN. Ele fornece execução governada de eventos, persistência de ledger, replay determinístico, verificação de `state_root` e auditabilidade local para fluxos de execução distribuída.
+## O Kernel de Execução Verificável da DSAN Network
 
-No estágio atual, o DSAN-core não está posicionado como uma blockchain de produção ou uma rede BFT completa. Em vez disso, trata-se de um núcleo experimental de governança de execução, focado em processamento verificável de ações, reconstrução reproduzível do estado e design de ledger orientado à auditoria.
+O `dsan-core` é uma implementação de referência dos mecanismos centrais para **execução digital verificável e governada** dentro da Decentralized Sovereign Agent Network (DSAN).
 
-## O que o DSAN-core faz
+O projeto fornece mecanismos executáveis para:
 
-Atualmente, o DSAN-core suporta:
+* identidade criptográfica e assinaturas;
+* representação canônica de eventos;
+* validação de eventos;
+* autorização baseada em políticas;
+* processamento de decisões de execução;
+* submissão de eventos assinados;
+* persistência em ledger;
+* replay determinístico;
+* geração de raízes Merkle;
+* reconstrução de estado;
+* verificação de state roots;
+* auditoria independente;
+* sincronização de ledger.
 
-- Criação de eventos assinados por agentes DSAN.
-- Hashing canônico de eventos.
-- Admissão de eventos baseada em políticas.
-- Votação majoritária entre pares.
-- Autorização de execução por Totem.
-- Persistência local de ledger.
-- Cálculo de Merkle root sobre os hashes do ledger.
-- Replay determinístico para derivação de estado.
-- Geração e verificação de `state_root`.
-- Auditoria local independente por replay.
-- Sincronização de ledger com validação estrutural.
+O `dsan-core` é uma **implementação de mecanismos selecionados da DSAN**. Ele não constitui, isoladamente, a definição completa da arquitetura DSAN.
 
-## Arquitetura atual
+A definição arquitetural da DSAN é mantida pelo repositório **DSAN-Ecosystem** e por suas especificações arquiteturais associadas.
 
-O núcleo atual está organizado em cinco camadas lógicas.
+---
 
-## Nó auditor
+## 1. Relação com a Arquitetura DSAN
 
-O DSAN-core agora inclui um papel dedicado de **Nó Auditor**, separado do nó executor.
+A DSAN é um framework arquitetural no qual a soberania pertence à entidade soberana e é manifestada operacionalmente por meio de mecanismos computacionais apropriados.
 
-O Nó Auditor:
-- busca `/ledger`, `/state`, `/root` e `/state_root` de um nó alvo,
-- valida a estrutura do ledger,
-- verifica hashes canônicos dos eventos,
-- checa a continuidade de `prev_hash`,
-- verifica assinaturas dos validadores,
-- recalcula o Merkle root,
-- faz replay do ledger localmente para recomputar `state_root`,
-- compara os resultados locais com os compromissos publicados pelo nó remoto.
+Dentro dessa arquitetura:
 
-Isso cria uma separação entre:
-- **nó executor**, que valida, executa e persiste eventos;
-- **nó auditor**, que verifica de forma independente a integridade histórica e a consistência do estado derivado.
+```text
+Entidade Soberana
+       │
+       ▼
+    Guardian
+       │
+ ┌─────┴─────┐
+ ▼           ▼
+GuardianOS   Totem
+       │      │
+       └──┬───┘
+          ▼
+      DSAN Core
+          │
+          ▼
+     DSAN Network
+```
 
-No estágio atualmente validado, o Nó Auditor confirmou com sucesso:
-- validade estrutural do ledger,
-- consistência do Merkle root,
-- consistência do state root,
-- concordância do replay independente com o nó executor.
+Os componentes possuem responsabilidades distintas:
 
-### Camada de agentes
+| Componente            | Responsabilidade principal                         |
+| --------------------- | -------------------------------------------------- |
+| Entidade Soberana     | Fonte da soberania                                 |
+| Guardian              | Manifestação operacional da entidade soberana      |
+| GuardianOS            | Ambiente computacional protegido do Guardian       |
+| Totem                 | Âncora física opcional de soberania ou autorização |
+| DSAN Core             | Mecanismos de execução e protocolos verificáveis   |
+| DSAN Network          | Interação distribuída                              |
+| Aplicações de Domínio | Utilização da DSAN em contextos específicos        |
 
-Os agentes criam eventos assinados contendo:
-- `sender`
-- `payload`
-- `nonce`
-- `prev_hash`
+O `dsan-core`, portanto, não deve ser interpretado como responsável por redefinir a ontologia do Guardian, GuardianOS, Totem ou das entidades soberanas.
 
-Cada evento é serializado de forma canônica, assinado com Ed25519 e transformado em hash antes do envio.
+---
 
-### Camada de nó
+## 2. O que este Repositório Implementa
 
-Um nó DSAN:
-- recebe eventos candidatos,
-- verifica a assinatura do remetente,
-- checa replay e continuidade da cadeia,
-- avalia regras de política,
-- coleta votos locais e de pares,
-- exige autorização do Totem,
-- executa a ação,
-- assina o hash do evento como validador,
-- adiciona o pacote final ao ledger.
+A implementação atual concentra-se na **verificabilidade da execução digital**.
 
-### Camada de ledger
+Seus principais mecanismos incluem:
 
-Cada pacote persistido pode conter:
-- `event`
-- `hash`
-- `validators`
-- `result`
-- `state_root`
+### Identidade
 
-O ledger atua ao mesmo tempo como histórico de execução e como substrato para replay.
+Identidades criptográficas são utilizadas para atribuir eventos e verificar assinaturas.
 
-### Camada de replay
+### Eventos
 
-O motor de replay reconstrói o estado a partir do histórico do ledger, aplicando todos os eventos em sequência. Isso produz um `state_root` determinístico, que pode ser verificado independentemente.
+Eventos relacionados à execução são representados de forma canônica, permitindo hashing, assinatura, armazenamento, replay e verificação.
 
-### Camada de auditoria
+### Autorização
 
-Um auditor pode:
-- buscar o ledger,
-- recomputar o estado localmente,
-- comparar o `state_root` recomputado com o `state_root` publicado pelo nó,
-- verificar se o histórico de execução e o estado publicado estão consistentes.
+As decisões de execução são avaliadas de acordo com políticas e condições de autorização aplicáveis.
 
-## Fluxo de execução
+Autorização é tratada como uma **decisão ou condição verificável para execução**, e não como a fonte da autoridade soberana.
 
-O fluxo atual de execução é:
+### Ledger
 
-1. O agente cria um evento assinado.
-2. O nó recebe o evento.
-3. O nó valida hash, assinatura, nonce e continuidade da cadeia.
-4. O nó aplica as verificações de política.
-5. O nó coleta votos locais e de pares.
-6. O nó solicita autorização do Totem.
-7. O nó executa o evento.
-8. O nó calcula o `state_root` resultante.
-9. O nó coleta assinaturas dos validadores.
-10. O nó adiciona o pacote ao ledger.
-11. O nó expõe ledger, Merkle root e state root para verificação.
+Eventos validados podem ser registrados em uma estrutura de ledger orientada à preservação do histórico.
 
-## Propriedades verificadas
+### Replay
 
-No estágio recuperado atual, o DSAN-core demonstra:
+O sistema permite reconstruir deterministicamente o estado a partir do histórico registrado de eventos.
 
-- **Hash canônico de eventos**
-- **Histórico de ledger reproduzível**
-- **Verificação de estado derivado**
-- **Normalização de `state_root` por entrada**
-- **Checagem de consistência do state root**
-- **Auditabilidade local independente**
+### State Root
 
-Isso significa que um terceiro pode recomputar o estado final derivado do histórico do ledger, em vez de confiar apenas na resposta de execução ao vivo do nó.
+Um estado resultante pode ser representado por uma raiz criptograficamente derivada, permitindo que um observador independente verifique se um estado reconstruído corresponde ao estado esperado.
 
-## Estrutura do repositório
+### Auditoria
 
-O repositório está atualmente organizado em torno do núcleo de execução do DSAN-core e de suas ferramentas de validação e suporte.
+O repositório inclui mecanismos para validação independente da integridade dos eventos, assinaturas, estrutura do ledger, resultados de replay e state roots.
+
+---
+
+## 3. Fluxo de Execução da Implementação de Referência
+
+A implementação atual fornece um fluxo concreto de execução que pode ser representado como:
+
+```text
+Agente
+  │
+  ▼
+Validação de Política
+  │
+  ▼
+Consenso / Validação
+  │
+  ▼
+Autorização
+  │
+  ├───────────────┐
+  │               │
+  ▼               ▼
+Execução        Rejeição
+  │
+  ▼
+Ledger
+  │
+  ▼
+Replay Determinístico
+  │
+  ▼
+Estado
+  │
+  ▼
+State Root
+  │
+  ▼
+Auditoria Independente
+```
+
+Esse diagrama descreve a **implementação de referência atual**.
+
+Ele não deve ser interpretado como um pipeline obrigatório para toda implantação DSAN.
+
+Diferentes implantações podem utilizar diferentes mecanismos de autorização, modelos de confiança, ambientes de execução ou restrições de governança.
+
+---
+
+## 4. Autorização Física e o Totem
+
+A implementação atual do `dsan-core` inclui suporte a um **gate de autorização por Totem** em determinados fluxos de execução.
+
+Esse é um mecanismo de implementação.
+
+Ele não significa que toda operação DSAN exija um Totem físico.
+
+O modelo arquitetural distingue:
+
+```text
+Autoridade Soberana
+        ≠
+Autorização
+        ≠
+Execução
+```
+
+e:
+
+```text
+Totem
+        ≠
+Guardian
+        ≠
+GuardianOS
+        ≠
+Entidade Soberana
+```
+
+O Totem pode fornecer uma âncora física ou participar da autorização quando isso for exigido pela política ou pelo contexto de execução aplicável.
+
+A implementação atual do Core demonstra, portanto, uma forma concreta de autorização física sem transformar essa forma específica em requisito universal da arquitetura DSAN.
+
+---
+
+## 5. Verificabilidade
+
+Um dos objetivos centrais do `dsan-core` é que o histórico de execução não dependa exclusivamente da confiança no componente que originalmente realizou a execução.
+
+A implementação fornece uma cadeia de verificação:
+
+```text
+Evento Assinado
+     │
+     ▼
+Representação Canônica
+     │
+     ▼
+Hash
+     │
+     ▼
+Ledger
+     │
+     ▼
+Replay
+     │
+     ▼
+Estado Reconstruído
+     │
+     ▼
+State Root
+     │
+     ▼
+Verificação Independente
+```
+
+Isso permite que um auditor independente reconstrua e verifique partes relevantes do estado sem depender exclusivamente da confiabilidade do executor original.
+
+---
+
+## 6. Auditoria Independente
+
+O repositório inclui um modelo orientado à verificação independente.
+
+Um auditor pode avaliar, de acordo com os mecanismos implementados neste repositório:
+
+* estrutura dos eventos;
+* assinaturas criptográficas;
+* hashes dos eventos;
+* integridade do ledger;
+* informações dos validadores;
+* raízes Merkle;
+* replay determinístico;
+* estado reconstruído;
+* state roots.
+
+O auditor não constitui uma fonte adicional de soberania.
+
+Sua função é **verificação e produção de evidências**.
+
+---
+
+## 7. Replay Determinístico
+
+O replay determinístico constitui uma propriedade importante da implementação de referência.
+
+Dado o mesmo histórico válido de eventos e as mesmas regras determinísticas aplicáveis, diferentes nós devem ser capazes de reconstruir estados equivalentes.
+
+Conceitualmente:
+
+```text
+Histórico de Eventos
+        │
+        ▼
+      Replay
+        │
+        ▼
+     Estado S
+        │
+        ▼
+    State Root
+```
+
+Isso fornece uma base para:
+
+* reprodutibilidade;
+* auditoria;
+* verificação de integridade;
+* comparação de estados;
+* recuperação;
+* sincronização.
+
+---
+
+## 8. Modelo de Segurança
+
+O `dsan-core` utiliza mecanismos criptográficos para fornecer verificabilidade e integridade.
+
+Esses mecanismos podem incluir:
+
+* assinaturas de chave pública;
+* hashing de eventos;
+* serialização canônica;
+* representações autenticadas de estado;
+* estruturas Merkle;
+* replay determinístico;
+* verificação independente.
+
+A verificação criptográfica, por si só, não estabelece que uma ação seja legítima.
+
+A legitimidade depende, conforme o contexto, de:
+
+* identidade;
+* contexto;
+* política;
+* autorização;
+* estado;
+* delegação;
+* relações de confiança;
+* regras de governança.
+
+Portanto:
+
+> **Validade criptográfica constitui evidência de integridade e atribuição; ela não é equivalente à autorização ou à soberania.**
+
+---
+
+## 9. Consenso
+
+A implementação atual contém mecanismos de validação entre pares e aprovação baseada em maioria.
+
+Esses mecanismos fazem parte da implementação de referência atual.
+
+Eles não devem ser interpretados como uma afirmação de que a DSAN exige um único algoritmo universal de consenso.
+
+Uma implantação específica pode utilizar:
+
+* validação entre pares;
+* mecanismos baseados em quórum;
+* validação centralizada;
+* validação federada;
+* autorização específica da aplicação;
+* outros mecanismos apropriados.
+
+O requisito arquitetural não é um algoritmo específico de consenso.
+
+O requisito é que as decisões e transições de estado relevantes permaneçam **adequadamente verificáveis e governadas**.
+
+---
+
+## 10. Operação Offline e Local
+
+O Core pode operar utilizando estado e informações disponíveis localmente.
+
+Entretanto:
+
+> **operação offline não significa autonomia irrestrita.**
+
+Uma implementação deve preservar as restrições aplicáveis de:
+
+* autorização;
+* delegação;
+* expiração;
+* revogação;
+* estado.
+
+Isso deve permanecer válido mesmo quando não houver conectividade contínua com a rede.
+
+Quando a conectividade for restaurada, a sincronização não deve automaticamente ressuscitar uma autoridade que tenha expirado ou sido revogada.
+
+O comportamento offline é, portanto, uma questão de implementação e política, e não uma regra universal de autorização.
+
+---
+
+## 11. Escopo dos Protocolos
+
+Os protocolos implementados neste repositório descrevem mecanismos utilizados pelo `dsan-core`.
+
+Eles incluem mecanismos relacionados a:
+
+* submissão de eventos;
+* validação;
+* operações de ledger;
+* sincronização;
+* replay;
+* reconstrução de estado;
+* auditoria.
+
+Esses protocolos devem ser entendidos como **protocolos de nível de implementação**.
+
+Eles não constituem a especificação arquitetural completa da DSAN.
+
+Os conceitos e invariantes arquiteturais são mantidos separadamente na documentação do DSAN-Ecosystem.
+
+---
+
+## 12. Status Experimental e de Referência
+
+Salvo indicação explícita em contrário, este repositório deve ser considerado uma **implementação de referência e experimental**.
+
+Destina-se a:
+
+* pesquisa;
+* validação arquitetural;
+* experimentação de protocolos;
+* experimentos de interoperabilidade;
+* educação;
+* desenvolvimento de aplicações específicas de domínio.
+
+A existência de uma implementação funcional não implica:
+
+* prontidão para produção;
+* certificação formal;
+* conformidade regulatória;
+* certificação de segurança.
+
+As propriedades de segurança devem ser avaliadas com base em modelos de ameaça explícitos e evidências da implementação.
+
+---
+
+## 13. Estrutura do Repositório
+
+O repositório é organizado em torno de preocupações de implementação:
 
 ```text
 dsan-core/
-├── README.md
-├── README.pt-BR.md
-├── CHANGELOG.md
-├── LICENSE
-├── RELEASE_CHECKLIST.md
-├── KNOWN_ISSUES.md
-├── clisend.py
-├── cliaudit.py
-├── migrate_state_roots.py
-├── ledger_node1.json
-├── dsan/
 ├── api/
 ├── cli/
 ├── docs/
-└── data/
+├── dsan/
+│   ├── agent/
+│   ├── auditor/
+│   ├── core/
+│   ├── crypto/
+│   ├── epl/
+│   ├── network/
+│   └── totem/
+├── ledgers/
+├── tests/
+├── README.md
+├── README.pt-BR.md
+└── requirements.txt
 ```
 
-Áreas principais:
-- `dsan/` contém a lógica central de execução, replay, auditoria, rede, política e Totem.
-- `clisend.py` e `cliaudit.py` fornecem fluxos auxiliares locais para envio e auditoria.
-- `migrate_state_roots.py` é usado para normalizar entradas históricas do ledger.
-- `ledger_node1.json` é o ledger local principal usado nas validações e verificações por replay.
-- `docs/`, `api/`, `cli/` e `data/` são diretórios de apoio para documentação, suporte de interface, utilitários de linha de comando e artefatos locais de dados.
+A estrutura interna poderá evoluir conforme a implementação amadureça.
 
-## Início rápido
+As responsabilidades arquiteturais não devem ser inferidas exclusivamente a partir dos nomes dos diretórios.
 
-### 1. Subir um nó local
+---
 
-```bash
-python -m dsan.network.node node1 5001
+## 14. Relação com os Outros Repositórios DSAN
+
+O `dsan-core` constitui um componente de um ecossistema maior.
+
+| Repositório                  | Papel                                                                   |
+| ---------------------------- | ----------------------------------------------------------------------- |
+| `DSAN-Ecosystem`             | Arquitetura, princípios, governança e documentação pública              |
+| `dsan-core`                  | Kernel de execução verificável e mecanismos de referência               |
+| `dsan-guardian` / GuardianOS | Ambiente computacional do Guardian e implementação física de referência |
+| `DSAN-simulator`             | Simulação, experimentação e educação                                    |
+| `DSAN-DREX-ENTERPRISE`       | Aplicação empresarial/de domínio                                        |
+| `radsecure-framework`        | Aplicação de domínio em saúde                                           |
+
+Os repositórios devem permanecer compreensíveis de forma independente, preservando simultaneamente a coerência arquitetural.
+
+---
+
+## 15. Limites Arquiteturais
+
+As seguintes distinções são preservadas intencionalmente:
+
+```text
+Entidade         ≠ Guardian
+Guardian         ≠ GuardianOS
+GuardianOS       ≠ Totem
+Totem            ≠ GuardianRing
+Identidade       ≠ Presença
+Presença         ≠ Intenção
+Intenção         ≠ Autoridade
+Autoridade       ≠ Autorização
+Autorização      ≠ Execução
+Execução         ≠ Evidência
+Evidência        ≠ Autoridade
 ```
 
-Isso inicia um nó DSAN local em `127.0.0.1:5001`.
+Essas distinções impedem que detalhes de implementação sejam silenciosamente transformados em definições arquiteturais.
 
-### 2. Verificar endpoints básicos
+---
 
-```bash
-curl http://127.0.0.1:5001/state
-curl http://127.0.0.1:5001/root
-curl http://127.0.0.1:5001/state_root
-curl http://127.0.0.1:5001/ledger
+## 16. Princípio de Projeto
+
+O princípio central deste repositório é:
+
+> **A execução deve ser atribuível, governada, reprodutível e verificável de forma independente.**
+
+O Core concentra-se, portanto, em mecanismos capazes de responder perguntas como:
+
+* Quem originou determinado evento?
+* O evento é criptograficamente válido?
+* O evento possui estrutura válida?
+* Quais condições de autorização eram aplicáveis?
+* A execução resultante foi registrada?
+* O estado resultante pode ser reconstruído?
+* Outro participante pode verificar independentemente esse estado?
+* As evidências podem ser auditadas posteriormente?
+
+---
+
+## 17. Não Objetivos
+
+O `dsan-core` não pretende:
+
+* definir a soberania;
+* substituir a especificação arquitetural DSAN;
+* exigir um Totem físico para toda operação;
+* definir todas as possíveis implementações do Guardian;
+* definir universalmente o hardware do GuardianOS;
+* prescrever uma única topologia de rede;
+* prescrever um único mecanismo de consenso;
+* funcionar como uma blockchain de propósito geral;
+* afirmar garantias universais de segurança;
+* substituir a governança específica de um domínio;
+* substituir requisitos legais ou regulatórios aplicáveis.
+
+---
+
+## 18. Direção de Desenvolvimento
+
+O desenvolvimento futuro poderá ampliar o Core em direção a:
+
+* modelos de autorização mais ricos;
+* classes de autorização contextual;
+* tratamento explícito de delegação;
+* semântica mais robusta de revogação;
+* mecanismos de recuperação;
+* esquemas interoperáveis de eventos;
+* sincronização aprimorada;
+* ferramentas de verificação independente;
+* integração com Guardian e GuardianOS;
+* mecanismos configuráveis de autorização física;
+* testes formais de protocolos;
+* validação baseada em modelos de ameaça mais rigorosos.
+
+A implementação deve evoluir sem alterar as distinções arquiteturais fundamentais definidas pelo DSAN-Ecosystem.
+
+---
+
+## 19. Relação com a Arquitetura DSAN
+
+A relação pode ser resumida da seguinte forma:
+
+```text
+DSAN-Ecosystem
+      │
+      │ definição arquitetural
+      ▼
+   DSAN Core
+      │
+      │ implementação
+      ├── Identidade
+      ├── Eventos
+      ├── Autorização
+      ├── Ledger
+      ├── Replay
+      ├── Estado
+      ├── State Root
+      └── Auditoria
 ```
 
-### 3. Enviar um evento
+O Core implementa mecanismos.
 
-Exemplo de `clisend.py`:
+O Ecosystem define o contexto arquitetural no qual esses mecanismos adquirem significado.
 
-```python
-import requests
-from dsan.agent.agent import DSANAgent
+---
 
-NODE_URL = "http://127.0.0.1:5001"
+## 20. Licença
 
-agent = DSANAgent("alice")
+Consulte o arquivo `LICENSE` para conhecer os termos de licenciamento aplicáveis a este repositório.
 
-state = requests.get(f"{NODE_URL}/state").json()
-prev_hash = state["last_hash"]
+---
 
-packet = agent.create_event(
-    {
-        "type": "transfer",
-        "from": "alice",
-        "to": "bob",
-        "amount": 10
-    },
-    prev_hash
-)
+## 21. Princípio Final
 
-response = requests.post(f"{NODE_URL}/receive", json=packet)
+O `dsan-core` existe para demonstrar que a execução governada pode ser representada por meio de mecanismos computacionais verificáveis.
 
-print("status:", response.status_code)
-print("body:", response.json())
-```
+Seu objetivo não é tornar a tecnologia soberana.
 
-Execute:
+Seu objetivo é fornecer mecanismos por meio dos quais execução, autorização, estado e evidência possam ser representados e verificados independentemente dentro da arquitetura DSAN.
 
-```bash
-python clisend.py
-```
-
-### 4. Auditar o nó de forma independente
-
-Exemplo de `cliaudit.py`:
-
-```python
-import requests
-from dsan.core.replay import replay_ledger
-
-NODE_URL = "http://127.0.0.1:5001"
-
-ledger = requests.get(f"{NODE_URL}/ledger").json()
-root_info = requests.get(f"{NODE_URL}/root").json()
-state_info = requests.get(f"{NODE_URL}/state_root").json()
-state_meta = requests.get(f"{NODE_URL}/state").json()
-
-replayed_state_root = replay_ledger(ledger)
-node_state_root = state_info["state_root"]
-
-print("=== RELATÓRIO DE AUDITORIA DSAN ===")
-print("ledger_size:", state_meta["ledger_size"])
-print("last_hash:", state_meta["last_hash"])
-print("merkle_root:", root_info["root"])
-print("node_state_root:", node_state_root)
-print("replayed_state_root:", replayed_state_root)
-
-if ledger:
-    last_entry = ledger[-1]
-    packet_state_root = last_entry.get("state_root")
-    print("packet_state_root:", packet_state_root)
-
-    if packet_state_root is None:
-        print("packet_state_root_check: AUSENTE")
-    elif packet_state_root == replayed_state_root:
-        print("packet_state_root_check: OK")
-    else:
-        print("packet_state_root_check: DIVERGENTE")
-else:
-    print("packet_state_root: LEDGER_VAZIO")
-
-if node_state_root == replayed_state_root:
-    print("audit_result: CONSISTENTE")
-else:
-    print("audit_result: DIVERGENTE")
-```
-
-Execute:
-
-```bash
-python cliaudit.py
-```
-
-### 5. Executar o nó auditor
-
-Inicie o serviço de auditoria:
-
-```bash
-python -m dsan.auditor.node
-```
-
-Em outro terminal, audite um nó executor em execução:
-
-```bash
-curl "http://127.0.0.1:5010/audit?target=http://127.0.0.1:5001"
-```
-
-Uma resposta bem-sucedida deve incluir:
-
-- `structure_valid: true`
-- `merkle_root_match: true`
-- `state_root_match: true`
-- `audit_result: CONSISTENT`
-
-Isso confirma que o ledger remoto, o Merkle root e o estado derivado podem ser verificados independentemente.
-
-### 6. Teste manual fim a fim com Totem
-
-Este fluxo valida o envio do evento, a execução com gate do Totem, a persistência no ledger e a verificação independente pelo auditor.
-
-#### Subir o nó executor
-
-```bash
-python -m dsan.network.node node1 5001
-```
-
-#### Subir o nó auditor
-
-```bash
-python -m dsan.auditor.node
-```
-
-#### Gerar um evento assinado
-
-Crie `send_event.py`:
-
-```python
-import json
-import time
-import hashlib
-import requests
-from cryptography.hazmat.primitives.asymmetric import ed25519
-from cryptography.hazmat.primitives import serialization
-
-def canonical_json(data):
-    return json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-
-def hash_event(event):
-    return hashlib.sha256(canonical_json(event).encode()).hexdigest()
-
-state = requests.get("http://127.0.0.1:5001/state", timeout=2).json()
-prev_hash = state["last_hash"]
-
-event = {
-    "nonce": str(int(time.time() * 1000)),
-    "payload": {"msg": "transfer_funds"},
-    "prev_hash": prev_hash,
-    "sender": "alice"
-}
-
-sender_sk = ed25519.Ed25519PrivateKey.generate()
-sender_pk = sender_sk.public_key()
-
-packet = {
-    "event": event,
-    "hash": hash_event(event),
-    "signature": sender_sk.sign(canonical_json(event).encode()).hex(),
-    "sender_sig_pub": sender_pk.public_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PublicFormat.Raw
-    ).hex()
-}
-
-with open("event.json", "w", encoding="utf-8") as f:
-    json.dump(packet, f, ensure_ascii=False, indent=2)
-
-print("event.json gerado")
-print("prev_hash =", prev_hash)
-print("new_hash =", packet["hash"])
-print("nonce =", packet["event"]["nonce"])
-```
-
-Execute:
-
-```bash
-python send_event.py
-cat event.json
-```
-
-#### Enviar o evento
-
-```bash
-curl -X POST http://127.0.0.1:5001/receive -H "Content-Type: application/json" -d @event.json
-```
-
-#### Autorizar no Totem
-
-Quando o terminal do nó executor mostrar:
-
-```bash
-🔐 Totem gesture (ex: 120):
-```
-
-digite:
-
-```bash
-120
-```
-
-#### Validar estado do nó e resultado da auditoria
-
-```bash
-curl http://127.0.0.1:5001/state
-curl http://127.0.0.1:5001/ledger
-curl "http://127.0.0.1:5010/audit?target=http://127.0.0.1:5001"
-```
-
-Resultado esperado:
-- `ledger_size` aumenta em 1,
-- `last_hash` muda,
-- o novo pacote aparece em `/ledger`,
-- o auditor retorna `audit_result: CONSISTENT`.
-
-> Observação: o endpoint correto de ingestão é `/receive`. O POST só conclui depois que a sequência gestual correta é digitada no terminal do nó executor. Reenviar o mesmo `event.json` pode retornar `{"status":"duplicate"}`.
-
-### 7. Normalizar entradas antigas do ledger
-
-Se entradas antigas do ledger ainda não tiverem `state_root`, use `migrate_state_roots.py` para normalizar os pacotes históricos.
-
-Execute:
-
-```bash
-python migrate_state_roots.py ledger_node1.json
-```
-
-Isso recalcula os valores progressivos de `state_root` e atualiza entradas legadas.
-
-## Status atual
-
-Este repositório reflete um **núcleo de execução recuperado e estabilizado**, evoluído além do estágio original de simulador.
-
-As propriedades validadas no branch recuperado incluem:
-
-- inicialização do nó e disponibilidade de endpoints,
-- carregamento do ledger persistido,
-- envio e execução de eventos,
-- replay determinístico,
-- consistência de `state_root`,
-- normalização histórica do ledger,
-- auditoria local bem-sucedida com resultado `CONSISTENTE`,
-- inicialização do Nó Auditor dedicado,
-- auditoria remota independente,
-- verificação de assinaturas dos validadores no auditor,
-- recomputação e comparação do Merkle root,
-- resultado bem-sucedido do auditor com `CONSISTENTE`.
-
-## Limitações
-
-O DSAN-core continua experimental e possui limitações importantes:
-
-- sem consenso BFT,
-- sem motor de consenso assíncrono,
-- sem governança persistente de identidade de validadores,
-- sem modelo finalizado de membership,
-- a autorização do Totem é interativa e atualmente presa ao terminal,
-- a semântica da política ainda está evoluindo,
-- a auditoria é local e orientada a desenvolvedor, ainda não um verificador isolado de produção.
-
-## Direção de desenvolvimento
-
-Os próximos passos mais lógicos são:
-
-- modo dedicado de nó auditor,
-- modelo persistente de identidade de validadores,
-- validação de sync mais estrita sobre o histórico normalizado,
-- definições formais de política EPL / JSON,
-- separação mais clara entre execução e estado,
-- documentação em nível de protocolo,
-- caminho de integração com os serviços mais amplos da Rede DSAN.
-
-## Posicionamento
-
-O DSAN-core deve ser entendido como um **núcleo de execução verificável**, e não apenas como um protótipo de blockchain.
-
-Seu propósito central é tornar a execução governada:
-- reproduzível,
-- derivável a partir do estado,
-- auditável externamente,
-- estruturalmente verificável.
-
-## Aviso
-
-Este projeto está em evolução arquitetural ativa. Interfaces, estrutura dos pacotes e lógica de verificação podem mudar conforme o núcleo se estabiliza.
+**DSAN — Sovereignty by Architecture.**
