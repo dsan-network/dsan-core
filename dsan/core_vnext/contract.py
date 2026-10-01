@@ -11,7 +11,7 @@ from dataclasses import asdict, dataclass
 
 CONTRACT_SCHEMA = "dsan:core-vnext-contract:1"
 API_VERSION = "1.0"
-PACKAGE_VERSION = "0.2.0a1"
+PACKAGE_VERSION = "0.2.0a2"
 
 SUPPORTED_PROTOCOLS = (
     "dsan:execution-ledger:alpha04:1",
@@ -23,6 +23,7 @@ FEATURES = (
     "execution-ledger.project/1",
     "execution-ledger.verify/1",
     "execution-ledger.state/1",
+    "execution-ledger.policy-lifecycle/1",
 )
 
 
