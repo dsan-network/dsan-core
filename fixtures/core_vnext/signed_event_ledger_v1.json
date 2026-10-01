@@ -1,0 +1,110 @@
+{
+  "schema": "dsan:core-vnext-signed-ledger-fixture:1",
+  "protocol": "dsan:execution-ledger:alpha04:1",
+  "subject": "dse:fixture",
+  "key_binding": {
+    "identity": "agent:fixture",
+    "key_id": "key:agent_fixture:1",
+    "algorithm": "Ed25519",
+    "public_key": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg"
+  },
+  "source_history_entry": {
+    "sequence": 1,
+    "previous_event": "event:14a1f0de5050375a480cba7842",
+    "previous_root": "028a36a529ceb9038f584d6bcc2fd7d9adca175c4b152b8575dc59e43ee6327b",
+    "event_id": "event:crypto-fixture-request",
+    "kind": "execution_request",
+    "accepted": true,
+    "event": {
+      "schema": "dsan:event:1",
+      "object_id": "event:crypto-fixture-request",
+      "object_type": "event",
+      "version": 1,
+      "event_type": "execution.request.create",
+      "subject": "dse:fixture",
+      "actor": "agent:fixture",
+      "timestamp": "2026-10-01T00:00:00Z",
+      "created_at": "2026-10-01T00:00:00Z",
+      "sequence": 1,
+      "previous_event": "event:14a1f0de5050375a480cba7842",
+      "causation": [],
+      "payload": {
+        "request_id": "request:crypto-fixture",
+        "execution_id": "execution:crypto-fixture",
+        "intent_id": "intent:crypto-fixture",
+        "target": "record:fixture",
+        "action": "record.read",
+        "policy_id": "policy:fixture",
+        "policy_version": 1,
+        "context_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "expires_at": "2099-01-01T00:00:00Z"
+      },
+      "provenance": {
+        "fixture": true
+      },
+      "integrity": {
+        "algorithm": "Ed25519",
+        "key_id": "key:agent_fixture:1",
+        "signer": "agent:fixture",
+        "signature": "H_ibxXqB3xanAurLmaf4K7x8Mo9rngbXARoRf6ZIAobR71aKEz3MjzRlW87j04sPRilLUqvQgPfKQ6153DsvBQ"
+      },
+      "authorized": false
+    },
+    "result": {
+      "accepted": true,
+      "event_id": "event:crypto-fixture-request",
+      "request_id": "request:crypto-fixture",
+      "execution_id": "execution:crypto-fixture",
+      "reason": "fixture request accepted"
+    },
+    "result_root": "ae94a9e79a6a71b07d9c037ed4e9963f46e80168b5983168634792efff5fd3a7",
+    "entry_root": "0b0b31c2a98bf1e72e2225cecce9ecab692fc256d6ae281fadc0005cf1d63980"
+  },
+  "ledger_record": {
+    "record_id": "ledger:1cb7ef9167859731713c2d1a84e3f3f9f432ae80ca7b594a8c8076f055ed1455",
+    "sequence": 1,
+    "previous_record_id": null,
+    "previous_record_root": "a1d8dbf5bfbb880e394b6598579e1024a8807912851e4043edd1ddcc3271a57d",
+    "event_id": "event:crypto-fixture-request",
+    "event_type": "execution.request.create",
+    "event_class": "REQUEST_CREATED",
+    "information_class": "ASSERTED_EVENT",
+    "event_time": "2026-10-01T00:00:00Z",
+    "subject": "dse:fixture",
+    "actor": "agent:fixture",
+    "journal_kind": "execution_request",
+    "accepted": true,
+    "references": {
+      "intent_id": "intent:crypto-fixture",
+      "request_id": "request:crypto-fixture",
+      "policy_id": "policy:fixture",
+      "policy_version": 1,
+      "execution_id": "execution:crypto-fixture"
+    },
+    "causal_event_ids": [],
+    "provenance": {
+      "fixture": true,
+      "dse": "dse:fixture",
+      "originating_actor": "agent:fixture",
+      "journal_kind": "execution_request",
+      "journal_sequence": 1
+    },
+    "event_integrity": {
+      "algorithm": "Ed25519",
+      "key_id": "key:agent_fixture:1",
+      "signer": "agent:fixture",
+      "signature": "H_ibxXqB3xanAurLmaf4K7x8Mo9rngbXARoRf6ZIAobR71aKEz3MjzRlW87j04sPRilLUqvQgPfKQ6153DsvBQ"
+    },
+    "journal_entry_root": "0b0b31c2a98bf1e72e2225cecce9ecab692fc256d6ae281fadc0005cf1d63980",
+    "result_root": "ae94a9e79a6a71b07d9c037ed4e9963f46e80168b5983168634792efff5fd3a7",
+    "record_root": "efa39fe86718134170cbf913928a1f8e69a7ff71025e040004392971d57eec50"
+  },
+  "expected_ledger_state": {
+    "protocol": "dsan:execution-ledger:alpha04:1",
+    "subject": "dse:fixture",
+    "sequence": 1,
+    "head_record_id": "ledger:1cb7ef9167859731713c2d1a84e3f3f9f432ae80ca7b594a8c8076f055ed1455",
+    "root": "efa39fe86718134170cbf913928a1f8e69a7ff71025e040004392971d57eec50",
+    "status": "CONSISTENT"
+  }
+}
