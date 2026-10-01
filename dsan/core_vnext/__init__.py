@@ -33,9 +33,15 @@ from .execution_ledger import (
     sha256_json,
     verify_execution_ledger_records,
 )
+from .ledger_projection import (
+    EVENT_CLASS,
+    REFERENCE_FIELDS,
+    project_accountable_history,
+)
 
 __all__ = [
     "AccountableHistoryVerificationResult",
+    "EVENT_CLASS",
     "EventKeyBinding",
     "EventVerificationResult",
     "ExecutionLedgerRecord",
@@ -44,6 +50,7 @@ __all__ = [
     "LEDGER_PROTOCOL",
     "LedgerReject",
     "LedgerVerificationResult",
+    "REFERENCE_FIELDS",
     "build_execution_ledger_record",
     "canonical_json",
     "execution_ledger_state",
@@ -51,6 +58,7 @@ __all__ = [
     "journal_genesis_root",
     "ledger_genesis_root",
     "ledger_record_id",
+    "project_accountable_history",
     "sha256_json",
     "signing_bytes",
     "signing_view",
