@@ -33,8 +33,9 @@ jobs:
           python -c "from dsan.core_vnext import API_VERSION, PACKAGE_VERSION, LEDGER_PROTOCOL, core_vnext_contract, project_accountable_history;
           c=core_vnext_contract();
           assert API_VERSION == '1.0';
-          assert PACKAGE_VERSION == '0.2.0a1';
+          assert PACKAGE_VERSION == '0.2.0a2';
           assert c.api_version == API_VERSION;
+          assert 'execution-ledger.policy-lifecycle/1' in c.features;
           assert LEDGER_PROTOCOL in c.protocols;
           assert callable(project_accountable_history)"
       - name: Run Core-vNext interoperability tests
