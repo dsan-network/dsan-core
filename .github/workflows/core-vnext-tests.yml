@@ -24,5 +24,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Install Core-vNext crypto dependency
+        run: python -m pip install cryptography==46.0.7
       - name: Run Core-vNext interoperability tests
         run: python -m unittest discover -s tests -p 'test_core_vnext_*.py' -v
