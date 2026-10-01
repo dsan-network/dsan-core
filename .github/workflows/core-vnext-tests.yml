@@ -8,12 +8,14 @@ on:
       - 'dsan/core_vnext/**'
       - 'fixtures/core_vnext/**'
       - 'tests/test_core_vnext_*.py'
+      - 'pyproject.toml'
       - '.github/workflows/core-vnext-tests.yml'
   pull_request:
     paths:
       - 'dsan/core_vnext/**'
       - 'fixtures/core_vnext/**'
       - 'tests/test_core_vnext_*.py'
+      - 'pyproject.toml'
       - '.github/workflows/core-vnext-tests.yml'
 
 jobs:
@@ -24,7 +26,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install Core-vNext crypto dependency
-        run: python -m pip install cryptography==46.0.7
+      - name: Install Core-vNext package
+        run: python -m pip install .
+      - name: Verify installed namespace
+        run: python -c "from dsan.core_vnext import project_accountable_history, LEDGER_PROTOCOL; assert LEDGER_PROTOCOL == 'dsan:execution-ledger:alpha04:1'; assert callable(project_accountable_history)"
       - name: Run Core-vNext interoperability tests
         run: python -m unittest discover -s tests -p 'test_core_vnext_*.py' -v
