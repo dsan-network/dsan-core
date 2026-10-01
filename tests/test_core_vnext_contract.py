@@ -17,13 +17,14 @@ class CoreVNextContractTests(unittest.TestCase):
         contract = core_vnext_contract()
         self.assertEqual("dsan:core-vnext-contract:1", CONTRACT_SCHEMA)
         self.assertEqual("1.0", API_VERSION)
-        self.assertEqual("0.2.0a1", PACKAGE_VERSION)
+        self.assertEqual("0.2.0a2", PACKAGE_VERSION)
         self.assertEqual(CONTRACT_SCHEMA, contract.contract_schema)
         self.assertEqual(API_VERSION, contract.api_version)
         self.assertEqual(PACKAGE_VERSION, contract.package_version)
         self.assertIn(LEDGER_PROTOCOL, contract.protocols)
         self.assertEqual(tuple(SUPPORTED_PROTOCOLS), contract.protocols)
         self.assertEqual(tuple(FEATURES), contract.features)
+        self.assertIn("execution-ledger.policy-lifecycle/1", contract.features)
 
     def test_installed_distribution_version_matches_manifest(self):
         self.assertEqual(PACKAGE_VERSION, importlib.metadata.version("dsan-core-vnext"))
@@ -36,6 +37,7 @@ class CoreVNextContractTests(unittest.TestCase):
         self.assertIsInstance(raw["protocols"], list)
         self.assertIsInstance(raw["features"], list)
         self.assertIn("execution-ledger.project/1", raw["features"])
+        self.assertIn("execution-ledger.policy-lifecycle/1", raw["features"])
 
 
 if __name__ == "__main__":
