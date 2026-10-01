@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dsan-core-vnext"
+version = "0.1.0a1"
+description = "Experimental DSAN Core-vNext interoperability primitives"
+readme = "README.Eng.md"
+requires-python = ">=3.11"
+license = {file = "LICENSE"}
+authors = [
+  {name = "DSAN Network"}
+]
+dependencies = [
+  "cryptography>=46.0.7,<47"
+]
+
+[tool.setuptools]
+packages = ["dsan", "dsan.core_vnext"]
