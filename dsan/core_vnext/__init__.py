@@ -12,6 +12,15 @@ from .accountable_history import (
     journal_genesis_root,
     verify_accountable_history_entry,
 )
+from .contract import (
+    API_VERSION,
+    CONTRACT_SCHEMA,
+    FEATURES,
+    PACKAGE_VERSION,
+    SUPPORTED_PROTOCOLS,
+    CoreVNextContract,
+    core_vnext_contract,
+)
 from .event_crypto import (
     EventKeyBinding,
     EventVerificationResult,
@@ -40,19 +49,26 @@ from .ledger_projection import (
 )
 
 __all__ = [
+    "API_VERSION",
     "AccountableHistoryVerificationResult",
+    "CONTRACT_SCHEMA",
+    "CoreVNextContract",
     "EVENT_CLASS",
     "EventKeyBinding",
     "EventVerificationResult",
     "ExecutionLedgerRecord",
     "ExecutionLedgerState",
+    "FEATURES",
     "HistoryReject",
     "LEDGER_PROTOCOL",
     "LedgerReject",
     "LedgerVerificationResult",
+    "PACKAGE_VERSION",
     "REFERENCE_FIELDS",
+    "SUPPORTED_PROTOCOLS",
     "build_execution_ledger_record",
     "canonical_json",
+    "core_vnext_contract",
     "execution_ledger_state",
     "journal_genesis_event",
     "journal_genesis_root",
