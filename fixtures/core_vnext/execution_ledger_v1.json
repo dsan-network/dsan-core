@@ -1,0 +1,95 @@
+{
+  "schema": "dsan:core-vnext-execution-ledger-fixture:1",
+  "protocol": "dsan:execution-ledger:alpha04:1",
+  "subject": "dse:fixture",
+  "records": [
+    {
+      "record_id": "ledger:1cb7ef9167859731713c2d1a84e3f3f9f432ae80ca7b594a8c8076f055ed1455",
+      "sequence": 1,
+      "previous_record_id": null,
+      "previous_record_root": "a1d8dbf5bfbb880e394b6598579e1024a8807912851e4043edd1ddcc3271a57d",
+      "event_id": "event:fixture-request",
+      "event_type": "execution.request.create",
+      "event_class": "REQUEST_CREATED",
+      "information_class": "ASSERTED_EVENT",
+      "event_time": "2026-10-01T00:00:00Z",
+      "subject": "dse:fixture",
+      "actor": "agent:fixture",
+      "journal_kind": "execution_request",
+      "accepted": true,
+      "references": {
+        "intent_id": "intent:fixture",
+        "request_id": "request:fixture",
+        "policy_id": "policy:fixture",
+        "policy_version": 1,
+        "execution_id": "execution:fixture"
+      },
+      "causal_event_ids": [],
+      "provenance": {
+        "dse": "dse:fixture",
+        "originating_actor": "agent:fixture",
+        "journal_kind": "execution_request",
+        "journal_sequence": 1,
+        "fixture": true
+      },
+      "event_integrity": {
+        "algorithm": "Ed25519",
+        "key_id": "key:fixture:1",
+        "signer": "agent:fixture",
+        "signature": "fixture-signature-1"
+      },
+      "journal_entry_root": "1111111111111111111111111111111111111111111111111111111111111111",
+      "result_root": "2222222222222222222222222222222222222222222222222222222222222222",
+      "record_root": "021125a9b714b6fc66b21d5cfa4ee328d92abfd9952dfdac9fe4c697dfb3dd3c"
+    },
+    {
+      "record_id": "ledger:c9c39df0b3f94b388c8ee0ca26f1299bd67848d7c095ed404a7978275d0a6cd5",
+      "sequence": 2,
+      "previous_record_id": "ledger:1cb7ef9167859731713c2d1a84e3f3f9f432ae80ca7b594a8c8076f055ed1455",
+      "previous_record_root": "021125a9b714b6fc66b21d5cfa4ee328d92abfd9952dfdac9fe4c697dfb3dd3c",
+      "event_id": "event:fixture-decision",
+      "event_type": "execution.decision.issue",
+      "event_class": "DECISION_CREATED",
+      "information_class": "ASSERTED_EVENT",
+      "event_time": "2026-10-01T00:00:01Z",
+      "subject": "dse:fixture",
+      "actor": "eaf:fixture",
+      "journal_kind": "execution_decision",
+      "accepted": true,
+      "references": {
+        "request_id": "request:fixture",
+        "decision_id": "decision:fixture",
+        "policy_id": "policy:fixture",
+        "policy_version": 1,
+        "capability_id": "cap:fixture"
+      },
+      "causal_event_ids": [
+        "event:fixture-request"
+      ],
+      "provenance": {
+        "dse": "dse:fixture",
+        "originating_actor": "eaf:fixture",
+        "journal_kind": "execution_decision",
+        "journal_sequence": 2,
+        "fixture": true
+      },
+      "event_integrity": {
+        "algorithm": "Ed25519",
+        "key_id": "key:eaf_fixture:1",
+        "signer": "eaf:fixture",
+        "signature": "fixture-signature-2"
+      },
+      "journal_entry_root": "3333333333333333333333333333333333333333333333333333333333333333",
+      "result_root": "4444444444444444444444444444444444444444444444444444444444444444",
+      "record_root": "6afa3c1432aa1c837e1cd6e8fa099d42c52ccacbe5a2518991cdf95087016d10"
+    }
+  ],
+  "expected_state": {
+    "protocol": "dsan:execution-ledger:alpha04:1",
+    "subject": "dse:fixture",
+    "sequence": 2,
+    "head_record_id": "ledger:c9c39df0b3f94b388c8ee0ca26f1299bd67848d7c095ed404a7978275d0a6cd5",
+    "root": "6afa3c1432aa1c837e1cd6e8fa099d42c52ccacbe5a2518991cdf95087016d10",
+    "status": "CONSISTENT"
+  }
+}
