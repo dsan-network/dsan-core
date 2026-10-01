@@ -5,6 +5,8 @@ from pathlib import Path
 
 from dsan.core_vnext.execution_ledger import (
     LEDGER_PROTOCOL,
+    build_execution_ledger_record,
+    execution_ledger_state,
     ledger_genesis_root,
     ledger_record_id,
     verify_execution_ledger_records,
@@ -40,6 +42,47 @@ class CoreVNextExecutionLedgerContracts(unittest.TestCase):
             self.assertEqual(ledger_record_id(subject, sequence), record["record_id"])
             self.assertNotEqual(record["record_id"], record["event_id"])
 
+    def test_builder_regenerates_fixture_records_exactly(self):
+        fixture = self.load()
+        subject = fixture["subject"]
+        previous_id = None
+        previous_root = ledger_genesis_root(subject)
+        generated = []
+        for expected in fixture["records"]:
+            built = build_execution_ledger_record(
+                subject=subject,
+                sequence=expected["sequence"],
+                previous_record_id=previous_id,
+                previous_record_root=previous_root,
+                event_id=expected["event_id"],
+                event_type=expected["event_type"],
+                event_class=expected["event_class"],
+                information_class=expected["information_class"],
+                event_time=expected["event_time"],
+                actor=expected["actor"],
+                journal_kind=expected["journal_kind"],
+                accepted=expected["accepted"],
+                references=expected["references"],
+                causal_event_ids=expected["causal_event_ids"],
+                provenance=expected["provenance"],
+                event_integrity=expected["event_integrity"],
+                journal_entry_root=expected["journal_entry_root"],
+                result_root=expected["result_root"],
+            )
+            self.assertEqual(expected, built.to_dict())
+            generated.append(built)
+            previous_id = built.record_id
+            previous_root = built.record_root
+
+        state = execution_ledger_state(subject, generated)
+        expected_state = fixture["expected_state"]
+        self.assertEqual(expected_state["protocol"], state.protocol)
+        self.assertEqual(expected_state["subject"], state.subject)
+        self.assertEqual(expected_state["sequence"], state.sequence)
+        self.assertEqual(expected_state["head_record_id"], state.head_record_id)
+        self.assertEqual(expected_state["root"], state.root)
+        self.assertEqual(expected_state["status"], state.status)
+
     def test_semantic_drift_breaks_record_integrity(self):
         fixture = self.load()
         records = copy.deepcopy(fixture["records"])
@@ -67,8 +110,6 @@ class CoreVNextExecutionLedgerContracts(unittest.TestCase):
         fixture = self.load()
         records = copy.deepcopy(fixture["records"])
         records[0]["event_id"] = records[0]["record_id"]
-        # Preserve no fake re-hashing here: the verifier should reject the
-        # semantic identity collapse even before accepting record integrity.
         result = verify_execution_ledger_records(fixture["subject"], records)
         self.assertFalse(result.accepted)
         self.assertIn("event", result.reason)
