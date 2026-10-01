@@ -1,7 +1,7 @@
 # DSAN Core-vNext — Interoperability Boundary
 
-**Status:** experimental Reference Profile migration layer  
-**Current scope:** accountable event integrity + accountable-history commitments + Execution Ledger canonical records  
+**Status:** experimental Reference Profile migration layer; App shadow consumption active  
+**Current scope:** accountable event integrity + accountable-history commitments + Execution Ledger canonical records/projection  
 **Legacy kernel impact:** none
 
 `dsan/core_vnext/` is an intentionally isolated namespace used to converge the current `dsan-app` governed-execution Reference Runtime with a future DSAN Core implementation.
@@ -20,7 +20,7 @@ In particular:
 Event ID != Ledger Record ID
 ```
 
-and the governed runtime now distinguishes:
+and the governed runtime distinguishes:
 
 ```text
 DSE
@@ -73,12 +73,28 @@ entry_root
 
 This is an interoperability bridge. It is not a declaration that the App journal serialization is the final normative DSAN Execution Ledger format.
 
+### Accountable-history projection
+
+`ledger_projection.py` consumes already-accountable history and deterministically projects it into Core-vNext `ExecutionLedgerRecord` objects.
+
+The projector preserves:
+
+- Event ID / Record ID separation;
+- event class;
+- information class;
+- causal event references;
+- Request / Decision / Release / Execution / Evidence / Reconciliation references;
+- provenance;
+- source journal commitments;
+- canonical Ledger chaining.
+
+It performs no Authority evaluation and no execution.
+
 ### Execution Ledger Record construction/verification
 
 `execution_ledger.py` provides:
 
 - deterministic `ledger:*` Record IDs;
-- Record ID distinct from Event ID;
 - independent Ledger Genesis Root;
 - canonical `record_root` construction;
 - `previous_record_id` / `previous_record_root` chaining;
@@ -88,26 +104,43 @@ This is an interoperability bridge. It is not a declaration that the App journal
 
 ---
 
-## 3. Cross-repository fixtures
+## 3. Installable package boundary
 
-Two fixtures are currently shared exactly between `dsan-app` and `dsan-core`.
+The repository now contains a minimal `pyproject.toml` exposing only:
+
+```text
+dsan
+dsan.core_vnext
+```
+
+as package:
+
+```text
+dsan-core-vnext
+```
+
+This package boundary exists for migration/interoperability testing. It does not package or replace the legacy v1 execution kernel.
+
+The Core-vNext CI installs the repository with:
+
+```text
+pip install .
+```
+
+and verifies that the installed namespace exposes the expected projection API before running interoperability tests.
+
+---
+
+## 4. Cross-repository fixtures
 
 ### Structural fixture
 
 ```text
 fixtures/core_vnext/execution_ledger_v1.json
+Git Blob SHA: 756f9b84fd6022bb917dd26fe8f26c411f62c3d3
 ```
 
-Purpose:
-
-- canonical Record ID;
-- ordering;
-- chaining;
-- semantic references;
-- deterministic Ledger Root;
-- serialization drift detection.
-
-Expected final Ledger Root:
+Expected Ledger Root:
 
 ```text
 6afa3c1432aa1c837e1cd6e8fa099d42c52ccacbe5a2518991cdf95087016d10
@@ -117,9 +150,10 @@ Expected final Ledger Root:
 
 ```text
 fixtures/core_vnext/signed_event_ledger_v1.json
+Git Blob SHA: 2fd3de7d8b8e35bd5553545c5d31472b561e94d4
 ```
 
-Purpose:
+It proves:
 
 ```text
 Ed25519 Event signature
@@ -137,9 +171,44 @@ efa39fe86718134170cbf913928a1f8e69a7ff71025e040004392971d57eec50
 
 The signing key in this fixture is deterministic test material and confers no real-world authority.
 
+### Governed-cycle fixture
+
+```text
+fixtures/core_vnext/governed_cycle_v1.json
+Git Blob SHA: a1038828f02dbfebde1e1b1c5c5dfd0cf5283af4
+```
+
+The scenario covers:
+
+```text
+Intent
+  ↓
+Execution Request
+  ↓
+EAF Decision — AUTHORIZED
+  ↓
+Execution Release
+  ↓
+EXECUTION_STARTED
+  ↓
+Reconciliation — INCONCLUSIVE
+  ↓
+Reconciliation — EXECUTED / COMPLETED
+  ↓
+Execution Evidence
+```
+
+Both repositories independently produce the same eight Ledger Records and final root:
+
+```text
+cf1564b7f53ce58a0e43c7e5eae42dd278b7f115d51b801192e2e66e91826709
+```
+
+Reconciliation remains represented as `STATE_OBSERVATION`, not authorization.
+
 ---
 
-## 4. Migration stages
+## 5. Migration stages
 
 Current progress:
 
@@ -147,40 +216,16 @@ Current progress:
 Stage A — fixture contract in dsan-app                 DONE
 Stage B — independent parser/verifier in dsan-core    DONE
 Stage C — byte-identical cross-repo fixture parity    DONE
-Stage D — Core-vNext ledger/event primitives          IN PROGRESS / SUBSTANTIAL
-Stage E — dsan-app consumes Core-vNext API             NOT STARTED
+Stage D — Core-vNext ledger/event/projection API       ESTABLISHED FOR CURRENT SLICE
+Stage E — dsan-app consumes Core-vNext API             IN PROGRESS / SHADOW MODE
 Stage F — duplicate App implementations removed        NOT STARTED
 ```
 
-Stage E must not start by deleting working App logic.
+Stage E was started without deleting working App logic.
 
-The safe order is:
+The App now has an optional fail-closed bridge that installs a pinned Core-vNext commit in a dedicated interoperability workflow and compares the external projection with its local projection.
 
-1. prove semantic parity;
-2. provide a stable Core-vNext API/package boundary;
-3. make the App consume that boundary behind tests;
-4. compare roots/results across both implementations;
-5. remove duplicate implementations only after parity is demonstrated.
-
----
-
-## 5. What Core-vNext does not yet claim
-
-Core-vNext does not yet provide a complete DSAN-SPEC-0010 conformant Execution Ledger.
-
-Open areas include:
-
-- full event-class catalog;
-- richer indirect correlation;
-- receipt/synchronization-time semantics;
-- generic conflict records and resolution;
-- first-class distributed Ledger Record exchange;
-- ledger retention lifecycle;
-- Ledger Record selective disclosure;
-- durable schema/version migration;
-- HRE-backed rollback/integrity anchoring;
-- full GuardianOS/device trust integration;
-- production App-to-Core dependency/API integration.
+This means Core-vNext is now actually consumed cross-repository under CI, while production App semantics remain unchanged.
 
 ---
 
@@ -213,17 +258,42 @@ Ledger Record
 
 The ledger records accountable history; it does not manufacture governance.
 
+Reconciliation records are observations/assertions about execution state. Their presence in the ledger does not create permission to execute or re-execute.
+
 ---
 
-## 7. Promotion criterion
+## 7. What Core-vNext does not yet claim
+
+Core-vNext does not yet provide a complete DSAN-SPEC-0010 conformant production Execution Ledger.
+
+Open areas include:
+
+- complete event-class catalog;
+- version/schema negotiation;
+- denied and conditional/Guardian-authorized execution fixtures;
+- rejected, failed and cancelled path parity;
+- generic synchronization/conflict Ledger Records;
+- first-class distributed Ledger Record exchange;
+- ledger retention lifecycle;
+- Ledger Record selective disclosure;
+- durable schema/version migration;
+- HRE-backed rollback/integrity anchoring;
+- full GuardianOS/device trust integration;
+- production release/version strategy for App-to-Core dependency.
+
+---
+
+## 8. Promotion criterion
 
 Core-vNext should be promoted from migration namespace toward the primary Core only after:
 
-- cross-repo fixtures remain green;
-- App and Core produce identical canonical records/roots from the same source history;
+- structural, cryptographic and governed-cycle fixtures remain green;
+- App and Core produce identical canonical records/roots from the same source histories;
+- shadow parity is exercised against live/recovered/federated runtime histories;
 - cryptographic verification semantics match;
 - version/schema behavior is explicit;
 - no v1 security property is silently weakened;
-- the App can consume Core-vNext without carrying a parallel implementation of the same canonical logic.
+- an observed migration period shows no App/Core divergence;
+- the App can switch read-only ledger/proof paths to Core-vNext before deleting duplicate code.
 
 Until then, `dsan/core_vnext` is the interoperability laboratory and compatibility boundary, not a replacement for the current v1 kernel.
